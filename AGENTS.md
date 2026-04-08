@@ -9,11 +9,19 @@ Turn Jarvis into a semi-autonomous development system with:
 
 ## Runtime rules
 1. Do not start multiple dev servers.
-2. Always prefer `npm run dev:hard-clean` when runtime state is unclear.
-3. Use `npm run dev:status` before deeper debugging.
-4. Use `npm run smoke` after meaningful code changes.
-5. Use `npm run backup` before risky changes.
-6. Do not change port 3000 unless explicitly requested.
+2. **PM2 is the only allowed runtime management path** for the running Jarvis app.
+3. **Do not use**:
+   - `npm run dev:hard-clean`
+   - `nohup npm run dev`
+   - broad `pkill`-based restart flows
+4. **Safe runtime workflow (PM2 only)**:
+   - `npm run build`
+   - `pm2 restart jarvis`
+   - wait briefly
+   - test relevant endpoints
+5. Use `npm run smoke` after meaningful code changes.
+6. Use `npm run backup` before risky or structural changes.
+7. Do not change port 3000 unless explicitly requested.
 
 ## Coding rules
 1. Keep changes small, modular, and reversible.
@@ -30,11 +38,16 @@ Turn Jarvis into a semi-autonomous development system with:
 4. Nice-to-have improvements later
 
 ## Standard workflow
-1. `npm run dev:hard-clean`
-2. `npm run dev:status`
-3. make change
-4. `npm run smoke`
-5. `npm run backup`
+1. inspect
+2. minimal patch
+3. `npm run build`
+4. `pm2 restart jarvis`
+5. wait briefly
+6. test relevant endpoints
+7. review
+8. commit
+9. `npm run smoke` (after meaningful changes)
+10. `npm run backup` (before risky or structural changes)
 
 ## Current focus
 1. Stable runtime control
