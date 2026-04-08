@@ -137,8 +137,8 @@ export class VoiceService {
       };
     }
 
-    if (normalized === 'mis on mu järgmine sündmus') {
-      const calendarResult = await this.calendarService.listUpcomingEvents(1);
+    if (normalized === 'kas mul on täna veel midagi' || normalized === 'kas mul on täna midagi veel') {
+      const calendarResult = await this.calendarService.listTodayEvents(20);
 
       if (calendarResult.status !== 'ready') {
         return {
@@ -151,12 +151,10 @@ export class VoiceService {
         };
       }
 
-      const nextEvent = calendarResult.events[0] ?? null;
-
-      if (!nextEvent) {
+      if (calendarResult.events.length === 0) {
         return {
           transcript,
-          responseText: 'Sul ei ole ühtegi tulevast sündmust.',
+          responseText: 'Sul ei ole täna enam ühtegi sündmust.',
           locale: 'et-EE',
           inputMode: input.source,
           outputMode: 'text',
@@ -164,12 +162,14 @@ export class VoiceService {
         };
       }
 
-      const timeMatch = nextEvent.startText.match(/\b(\d{1,2}:\d{2})\b/u);
-      const startsText = timeMatch ? `kell ${timeMatch[1]}` : nextEvent.startText;
+      const remaining = calendarResult.events
+        .slice(0, 5)
+        .map((event) => `${event.startText} ${event.summary}`)
+        .join('; ');
 
       return {
         transcript,
-        responseText: `Sinu järgmine sündmus on ${nextEvent.summary}, algab ${startsText}.`,
+        responseText: `Jah, sul on täna veel: ${remaining}.`,
         locale: 'et-EE',
         inputMode: input.source,
         outputMode: 'text',
