@@ -1,0 +1,18 @@
+MIN REPORT WORKING CHECKPOINT
+created_at=2026-04-07_20-37-33
+
+CONFIRMED
+- local health works
+- public health works
+- public bridge latest head works
+- active tunnel URL is resolved from current source
+- min report script works
+
+SCRIPT
+./scripts/jarvis-bridge-min-report.sh
+
+STATUS
+- backend bridge path: working
+- min operational report: working
+- poolautomaatika overall: 90%
+- remaining gap: ChatGPT side does not auto-consume bridge without user-triggered report

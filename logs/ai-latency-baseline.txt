@@ -1,0 +1,5 @@
+Direct backend routes: fast
+Gmail API: ~784 ms
+OpenAI voice direct call: ~1434 ms
+Voice fallback path: ~1657 ms
+Conclusion: keep more commands on direct routes, use AI as fallback only

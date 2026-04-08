@@ -1,0 +1,10 @@
+NEXT TARGET
+
+Mode:
+manual + tunnel/state
+
+Do next:
+1) lock current stable mode as official working mode
+2) do not touch Mac app path now
+3) do not open new branches
+4) work from stable baseline only

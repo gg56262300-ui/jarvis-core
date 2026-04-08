@@ -1,0 +1,23 @@
+RESTART QUICK CHECKPOINT
+
+VALMIS:
+- restart:quick töötab
+- ühe käsuga tehakse:
+  - Jarvise uus käivitus / taaskäivitus
+  - oodatakse, kuni Jarvis on valmis
+  - tehakse lühikontroll
+
+KINNITATUD TULEMUS:
+- Jarvis käivitati uuesti
+- Jarvis oodati valmis
+- ops:lite töötas
+- health plain töötas
+- execution_state plain töötas
+
+PÕHIKÄSUD:
+- npm run restart:quick -- 30
+- npm run ops:quick -- 30
+- npm run wait:ready -- 30
+- npm run confirm:plain:ready -- control_summary_compact 30
+- npm run confirm:plain:ready -- execution_state_compact 30
+- npm run confirm:plain:ready -- health 30

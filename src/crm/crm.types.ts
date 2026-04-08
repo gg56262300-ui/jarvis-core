@@ -1,0 +1,32 @@
+export type CrmLeadSource = 'whatsapp';
+
+export type CrmLead = {
+  id: number;
+  source: CrmLeadSource;
+  phone: string;
+  name: string | null;
+  tag: string | null;
+  notes: string | null;
+  projectCode: string | null;
+  city: string | null;
+  serviceType: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CrmLeadMessage = {
+  id: number;
+  leadId: number;
+  channel: 'whatsapp';
+  direction: 'inbound';
+  message: string;
+  createdAt: string;
+};
+
+export type ReminderEvent = {
+  id: number;
+  reminderId: number;
+  eventType: 'queued' | 'processed';
+  payload: string;
+  createdAt: string;
+};

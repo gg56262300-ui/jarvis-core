@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "executionId": "dfde6b73-06b8-4f29-a403-97dcde7503de",
+  "label": "ops-master-flow",
+  "status": "running",
+  "stepIndex": 3,
+  "totalSteps": 5,
+  "updatedAt": "2026-04-08T11:57:48.688Z",
+  "stepLabel": "control summary checked",
+  "stepStatus": "completed"
+}

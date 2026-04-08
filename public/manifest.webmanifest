@@ -1,0 +1,18 @@
+{
+  "name": "Jarvis",
+  "short_name": "Jarvis",
+  "lang": "et",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07120e",
+  "theme_color": "#103226",
+  "description": "Jarvise mobiilne häälpaneel eesti keeles.",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

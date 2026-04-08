@@ -1,0 +1,16 @@
+VOICE CALENDAR DELETE CHECKPOINT
+
+VALMIS:
+- häälkäsk / tekstkäsk "kustuta kalendrist ..." töötab
+- tulevane sündmus leitakse pealkirja järgi
+- sündmus kustutatakse Google Calendarist
+
+KINNITATUD TULEMUS:
+- käsk: kustuta kalendrist jarvis häältest
+- tulemus: sündmus kustutati edukalt
+- vastus tagastati voice turn kaudu
+
+PÕHIKÄSUD:
+- kustuta kalendrist pealkiri
+- lisa kalendrisse homme kell 12 kuni 13 pealkiri
+- näita kalendrit

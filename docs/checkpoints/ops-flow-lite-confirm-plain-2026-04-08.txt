@@ -1,0 +1,22 @@
+OPS FLOW CHECKPOINT
+
+VALMIS:
+- ops:lite töötab
+- confirm:one töötab
+- confirm:plain töötab
+- control_summary_compact plain output loetakse pärast confirmi uuesti üle
+- plain output näitab nüüd lõppseisu, mitte running/pending vahehetke
+
+KINNITATUD TULEMUS:
+- terminalStage=direct_run
+- terminalStatus=completed
+- pendingId=null
+- pendingRequestId=null
+- pendingStatus=null
+
+PÕHIKÄSUD:
+- npm run ops:lite
+- npm run confirm:one -- control_summary_compact
+- npm run confirm:plain -- control_summary_compact
+- npm run confirm:plain -- execution_state_compact
+- npm run confirm:plain -- health

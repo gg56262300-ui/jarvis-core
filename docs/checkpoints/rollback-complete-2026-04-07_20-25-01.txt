@@ -1,0 +1,12 @@
+ROLLBACK COMPLETE CHECKPOINT
+created_at=2026-04-07_20-25-01
+
+CONFIRMED
+- prev/current state works
+- prev/current last capture works
+- restore prev endpoint works
+- restore writes audit state
+- missing prev returns ROLLBACK_PREV_MISSING
+
+STATUS
+- rollback / undo / safety: 100%

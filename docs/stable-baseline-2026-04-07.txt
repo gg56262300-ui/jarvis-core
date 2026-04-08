@@ -1,0 +1,17 @@
+STABLE BASELINE 2026-04-07
+
+Mode:
+manual + tunnel/state
+
+Confirmed working:
+- health confirm
+- pwd confirm
+- pm2_status_jarvis confirm
+- jarvis_logs_quick confirm
+- jarvis_snapshot confirm
+
+Terminal path:
+- /Users/kait/jarvis-core
+
+Backup:
+- jarvis-core-2026-04-07_18-47-58.zip

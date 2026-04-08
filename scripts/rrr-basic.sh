@@ -1,0 +1,143 @@
+#!/bin/bash
+set -euo pipefail
+
+echo "===== RRR BASIC ====="
+
+pm2_line="$(pm2 list | grep -E ' jarvis ' || true)"
+health_ok="0"
+if curl --max-time 5 -s http://localhost:3000/health >/tmp/rrr_health.json 2>/dev/null; then
+  health_ok="1"
+fi
+
+top_cpu="$(ps -Ao pid,ppid,%cpu,%mem,etime,command | sort -k3 -nr | sed -n '1,6p')"
+top_mem="$(ps -Ao pid,ppid,%mem,%cpu,etime,command | sort -k3 -nr | sed -n '1,6p')"
+
+echo
+echo "## JARVIS"
+if echo "$pm2_line" | grep -q "online"; then
+  echo "🟢 PM2: jarvis online"
+else
+  echo "🔴 PM2: jarvis not online"
+fi
+
+if [ "$health_ok" = "1" ]; then
+  echo "🟢 HEALTH: OK"
+else
+  echo "🔴 HEALTH: FAIL"
+fi
+
+echo
+echo "## MAC CPU"
+echo "$top_cpu"
+
+high_cpu="0"
+if echo "$top_cpu" | awk 'NR==1 { if ($3+0 >= 80) exit 0; else exit 1 }'; then
+  high_cpu="1"
+fi
+
+chrome_hot="0"
+if echo "$top_cpu" | grep -Eqi 'Google Chrome|Chrome Helper'; then
+  chrome_hot="1"
+fi
+
+xprotect_hot="0"
+if echo "$top_cpu" | grep -qi 'XprotectService'; then
+  xprotect_hot="1"
+fi
+
+window_hot="0"
+if echo "$top_cpu" | grep -qi 'WindowServer'; then
+  window_hot="1"
+fi
+
+if [ "$high_cpu" = "1" ]; then
+  echo "🟡 MAC CPU: very high load detected"
+else
+  echo "🟢 MAC CPU: no extreme spike detected"
+fi
+
+if [ "$chrome_hot" = "1" ]; then
+  echo "🟡 APP LOAD: Chrome is in top CPU list"
+fi
+
+if [ "$xprotect_hot" = "1" ]; then
+  echo "🟡 SECURITY LOAD: XprotectService active"
+fi
+
+if [ "$window_hot" = "1" ]; then
+  echo "🟡 UI LOAD: WindowServer active"
+fi
+
+echo
+echo "## MEMORY"
+echo "$top_mem"
+
+echo
+echo "## NETWORK"
+net_ok="0"
+if curl --max-time 5 -s https://www.google.com >/dev/null 2>&1; then
+  net_ok="1"
+fi
+
+if [ "$net_ok" = "1" ]; then
+  echo "🟢 INTERNET: OK"
+else
+  echo "🔴 INTERNET: FAIL"
+fi
+
+echo
+echo "## NETWORK LATENCY"
+ping_line="$(ping -c 3 1.1.1.1 2>/dev/null | tail -n 1 || true)"
+if echo "$ping_line" | grep -q 'min/avg/max'; then
+  echo "$ping_line"
+else
+  echo "ping failed"
+fi
+
+echo
+echo "## NETWORK SPEED TOOL"
+if command -v speedtest >/dev/null 2>&1; then
+  echo "speedtest: installed"
+elif command -v speedtest-cli >/dev/null 2>&1; then
+  echo "speedtest-cli: installed"
+else
+  echo "speedtest: not installed"
+fi
+
+echo
+echo "## SECURITY BASIC"
+recent_logs="$(tail -n 40 /Users/kait/.pm2/logs/jarvis-error.log 2>/dev/null; tail -n 40 /Users/kait/.pm2/logs/jarvis-out.log 2>/dev/null || true)"
+if echo "$recent_logs" | grep -Eqi 'EADDRINUSE|Unhandled|Unexpected error|ERR_|Error:'; then
+  echo "🟡 LOG RISK: errors found in recent logs"
+else
+  echo "🟢 LOG RISK: no critical recent errors found"
+fi
+
+echo
+echo "## OVERALL"
+jarvis_ok="0"
+if echo "$pm2_line" | grep -q "online" && [ "$health_ok" = "1" ]; then
+  jarvis_ok="1"
+fi
+
+if [ "$jarvis_ok" = "0" ]; then
+  echo "🔴 OVERALL: Jarvis problem"
+elif [ "$high_cpu" = "1" ] || [ "$chrome_hot" = "1" ] || [ "$xprotect_hot" = "1" ] || [ "$window_hot" = "1" ]; then
+  echo "🟡 OVERALL: Jarvis OK, Mac needs attention"
+else
+  echo "🟢 OVERALL: System usable"
+fi
+
+echo
+echo "## NEXT ACTION"
+if [ "$jarvis_ok" = "0" ]; then
+  echo "🔴 Fix PM2/health first"
+elif [ "$high_cpu" = "1" ] && [ "$chrome_hot" = "1" ]; then
+  echo "🟡 Reduce Chrome load first"
+elif [ "$xprotect_hot" = "1" ]; then
+  echo "🟡 Wait for Xprotect scan to finish or re-check later"
+elif [ "$window_hot" = "1" ]; then
+  echo "🟡 Reduce UI/window load and re-check"
+else
+  echo "🟢 Continue normal work"
+fi

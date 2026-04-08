@@ -1,0 +1,5 @@
+===== COMMAND =====
+curl -s -X POST http://localhost:3000/api/debug/execution/step -H 'Content-Type: application/json' -d '{"stepIndex":1,"stepLabel":"health checked","stepStatus":"completed"}'
+
+===== OUTPUT =====
+{"ok":true,"executionId":"1f11ceb5-4bb5-4f87-b2f8-da09aaf4c643","label":"ops-master-flow","status":"running","stepIndex":1,"totalSteps":5,"updatedAt":"2026-04-08T11:50:05.935Z","stepLabel":"health checked","stepStatus":"completed"}

@@ -1,0 +1,242 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+import type { GaxiosError } from 'gaxios';
+import { google } from 'googleapis';
+import type { Credentials } from 'google-auth-library';
+
+import { AppError } from '../shared/errors/app-error.js';
+import { logger } from '../shared/logger/logger.js';
+import { listUpcomingEvents as listGoogleUpcomingEvents } from '../modules/calendar/services/googleCalendar.service.js';
+
+interface InstalledGoogleCredentials {
+  client_id: string;
+  client_secret: string;
+  redirect_uris: string[];
+}
+
+interface GoogleCredentialsFile {
+  installed?: InstalledGoogleCredentials;
+}
+
+export interface CalendarAuthorizationRequiredResult {
+  status: 'authorization_required';
+  responseText: string;
+  authUrl: string;
+  tokenPath: string;
+}
+
+export interface CalendarEventsReadyResult {
+  status: 'ready';
+  responseText: string;
+  events: Array<{
+    summary: string;
+    startText: string;
+  }>;
+}
+
+export type CalendarEventsResult =
+  | CalendarAuthorizationRequiredResult
+  | CalendarEventsReadyResult;
+
+export class CalendarService {
+  private readonly credentialsPath = path.resolve(process.cwd(), 'credentials.json');
+  private readonly tokenPath = path.resolve(process.cwd(), 'data/google-calendar-token.json');
+  private readonly scopes = ['https://www.googleapis.com/auth/calendar.readonly'];
+
+  async getAuthorizationUrl() {
+    const client = await this.createOAuthClient();
+
+    return {
+      authUrl: client.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: this.scopes,
+      }),
+      tokenPath: this.tokenPath,
+      instructions:
+        'Ava see link brauseris, logi Google kontoga sisse ja kleebi tagasi saadud code väärtus POST /api/calendar/google/authorize päringusse.',
+    };
+  }
+
+  async completeAuthorization(code: string) {
+    const client = await this.createOAuthClient();
+    let tokens: Credentials;
+
+    try {
+      const tokenResponse = await client.getToken(code.trim());
+      tokens = tokenResponse.tokens;
+    } catch (error) {
+      throw this.toGoogleAuthorizationError(error);
+    }
+
+    await this.saveToken(tokens);
+
+    return {
+      status: 'authorized' as const,
+      responseText: 'Google Calendar on nüüd kohalikus arenduses autoriseeritud.',
+      tokenPath: this.tokenPath,
+    };
+  }
+
+  async listUpcomingEvents(limit = 5): Promise<CalendarEventsResult> {
+    try {
+      const googleEvents = await listGoogleUpcomingEvents(limit);
+      const events = googleEvents.map((item) => ({
+        summary: item.summary?.trim() || 'Nimetu sündmus',
+        startText: this.formatEventStart(item.start || null),
+      }));
+
+      if (events.length === 0) {
+        return {
+          status: 'ready',
+          responseText: 'Sul ei ole lähiajal ühtegi tulevast kalendrisündmust.',
+          events,
+        };
+      }
+
+      const responseText = `Järgmised kalendrisündmused: ${events
+        .map((event) => `${event.startText} ${event.summary}`)
+        .join('; ')}.`;
+
+      return {
+        status: 'ready',
+        responseText,
+        events,
+      };
+    } catch (error) {
+      logger.warn({ err: error }, 'Google Calendar events request failed');
+
+      const client = await this.createOAuthClient();
+      return this.buildAuthorizationRequiredResult(client);
+    }
+  }
+
+  private async createOAuthClient() {
+    const credentials = await this.readCredentials();
+    const redirectUri = credentials.redirect_uris[0];
+
+    return new google.auth.OAuth2(
+      credentials.client_id,
+      credentials.client_secret,
+      redirectUri,
+    );
+  }
+
+  private async readCredentials() {
+    const fileContent = await fs.readFile(this.credentialsPath, 'utf8');
+    const parsed = JSON.parse(fileContent) as GoogleCredentialsFile;
+    const credentials = parsed.installed;
+
+    if (!credentials?.client_id || !credentials.client_secret || !credentials.redirect_uris?.length) {
+      throw new Error('credentials.json ei sisalda Google desktop OAuth andmeid.');
+    }
+
+    return credentials;
+  }
+
+  private async readToken(): Promise<Credentials | null> {
+    try {
+      const fileContent = await fs.readFile(this.tokenPath, 'utf8');
+      return this.normalizeToken(JSON.parse(fileContent) as Credentials);
+    } catch (error) {
+      const nodeError = error as NodeJS.ErrnoException;
+
+      if (nodeError.code === 'ENOENT') {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
+  private async saveToken(token: Credentials) {
+    await fs.mkdir(path.dirname(this.tokenPath), { recursive: true });
+    await fs.writeFile(this.tokenPath, JSON.stringify(this.normalizeToken(token), null, 2), {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
+    await fs.chmod(this.tokenPath, 0o600);
+  }
+
+  private buildAuthorizationRequiredResult(
+    client: InstanceType<typeof google.auth.OAuth2>,
+  ): CalendarAuthorizationRequiredResult {
+    return {
+      status: 'authorization_required',
+      responseText:
+        'Google Calendri kohalik autoriseerimine on veel tegemata. Ava /api/calendar/google/auth-url ja lõpeta autoriseerimine esmalt.',
+      authUrl: client.generateAuthUrl({
+        access_type: 'offline',
+        prompt: 'consent',
+        scope: this.scopes,
+      }),
+      tokenPath: this.tokenPath,
+    };
+  }
+
+  private formatEventStart(startValue: string | null) {
+    if (!startValue) {
+      return 'Aeg puudub';
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(startValue)) {
+      const date = new Date(`${startValue}T00:00:00`);
+
+      return new Intl.DateTimeFormat('et-EE', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(date);
+    }
+
+    return new Intl.DateTimeFormat('et-EE', {
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(startValue));
+  }
+
+  private normalizeToken(token: Credentials): Credentials {
+    return {
+      ...token,
+      access_token: token.access_token ?? undefined,
+      refresh_token: token.refresh_token ?? undefined,
+      scope: token.scope ?? undefined,
+      token_type: token.token_type ?? undefined,
+      expiry_date: token.expiry_date ?? undefined,
+    };
+  }
+
+  private toGoogleAuthorizationError(error: unknown): AppError {
+    logger.warn({ err: error }, 'Google Calendar token exchange failed');
+
+    const gaxiosError = error as GaxiosError<{
+      error?: string;
+      error_description?: string;
+    }>;
+    const googleError = gaxiosError.response?.data?.error;
+    const googleDescription = gaxiosError.response?.data?.error_description?.toLowerCase() ?? '';
+    const message = `${gaxiosError.message ?? ''} ${googleDescription}`.toLowerCase();
+    const isInvalidCode =
+      googleError === 'invalid_grant' ||
+      message.includes('invalid_grant') ||
+      message.includes('malformed auth code') ||
+      message.includes('bad request');
+
+    if (isInvalidCode) {
+      return new AppError(
+        'Google autoriseerimiskood on vigane, vales vormingus või aegunud. Loo uus kood Google logist ja proovi uuesti.',
+        400,
+        'GOOGLE_AUTHORIZATION_FAILED',
+      );
+    }
+
+    return new AppError(
+      'Google Calendri autoriseerimine ebaõnnestus. Palun loo uus autoriseerimiskood ja proovi uuesti.',
+      400,
+      'GOOGLE_AUTHORIZATION_FAILED',
+    );
+  }
+}

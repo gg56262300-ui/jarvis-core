@@ -1,0 +1,8 @@
+GUARDRAIL STATUS 2026-04-07
+
+Confirmed:
+- TERMINAL_RUN_NOT_ALLOWED works
+- TERMINAL_RUN_CONFIRMATION_REQUIRED works
+- policy metadata in run response works
+- pwd restored to requiresConfirmation: false
+- pwd direct run works again

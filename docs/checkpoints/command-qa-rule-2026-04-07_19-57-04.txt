@@ -1,0 +1,21 @@
+COMMAND QA RULE
+created_at=2026-04-07_19-57-04
+
+RULE
+Every command block must be: ACTION + CHECK + STOP-IF-WRONG
+
+REQUIRED
+- one main action only
+- one objective check immediately after action
+- if check fails: stop, do not continue chain
+- restart/tunnel/public/token/pm2 blocks must include local check before public check
+
+FORBIDDEN
+- long blind command chains
+- moving to next step before verifying current result
+- assuming URL/token/process is correct without check
+
+GOAL
+- reduce command defects
+- reduce rework
+- improve speed by catching errors immediately

@@ -1,0 +1,224 @@
+:root {
+  --bg-top: #12362a;
+  --bg-bottom: #07120e;
+  --surface: rgba(255, 255, 255, 0.1);
+  --surface-strong: rgba(255, 255, 255, 0.16);
+  --border: rgba(255, 255, 255, 0.14);
+  --text: #f3f1e6;
+  --muted: #c8d2cb;
+  --accent: #f3c677;
+  --accent-deep: #c88c31;
+  --danger: #c45b4f;
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(243, 198, 119, 0.22), transparent 30%),
+    linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+  color: var(--text);
+}
+
+body {
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 18px 14px 32px;
+}
+
+.panel {
+  width: 100%;
+  max-width: 460px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  font-size: 0.72rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.status-card,
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #8ea59b;
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.07);
+}
+
+.status-dot.listening {
+  background: var(--accent);
+}
+
+.status-dot.processing {
+  background: #95c3ff;
+}
+
+.status-dot.speaking {
+  background: #8fe1bc;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.talk-button,
+.secondary-button,
+.install-button {
+  border-radius: 22px;
+  min-height: 58px;
+  transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+}
+
+.talk-button:active,
+.secondary-button:active,
+.install-button:active {
+  transform: scale(0.98);
+}
+
+.talk-button {
+  background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+  color: #1f180c;
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 16px 20px;
+}
+
+.secondary-button,
+.install-button {
+  background: var(--surface-strong);
+  color: var(--text);
+  padding: 14px 18px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.card {
+  padding: 16px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.card-header span {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.content {
+  margin: 0;
+  min-height: 54px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.fallback-card {
+  gap: 12px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.text-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: rgba(7, 18, 14, 0.35);
+  color: var(--text);
+  border-radius: 18px;
+  padding: 14px;
+  resize: vertical;
+  margin-bottom: 12px;
+  font: inherit;
+}
+
+.text-input::placeholder {
+  color: #9eb0a6;
+}
+
+@media (min-width: 700px) {
+  .app-shell {
+    padding-top: 32px;
+  }
+
+  .panel {
+    max-width: 520px;
+  }
+}
+

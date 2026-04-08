@@ -1,0 +1,7 @@
+===== TERMINAL CAPTURE =====
+time: 2026-04-08 12:50:27
+pwd: /Users/kait/jarvis-core
+cmd: curl -s http://localhost:3000/api/debug/terminal-restore-check-compact
+----- OUTPUT START -----
+{"ok":true,"summary":{"currentStage":"direct_run","currentStatus":"completed","currentId":"control_summary","currentCmd":"curl -s http://localhost:3000/api/debug/terminal-restore-check-compact","currentExitCode":0,"prevStage":"direct_run","prevStatus":"completed","prevId":"control_summary","prevCmd":"curl -s http://localhost:3000/api/debug/terminal-restore-check-compact","prevExitCode":0}}----- OUTPUT END -----
+exit_code: 0

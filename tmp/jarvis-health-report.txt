@@ -1,0 +1,72 @@
+===== JARVIS HEALTH REPORT =====
+
+----- HEALTH -----
+{"status":"ok","service":"jarvis-core","timestamp":"2026-04-08T15:52:07.157Z"}
+
+----- PM2 -----
+status=online
+restarts=6424
+pm_uptime=1775663257698
+
+
+----- OPS LITE -----
+===== JARVIS OPS LITE =====
+health: ok
+pm2: online
+terminal_stage: direct_run
+execution_from_control: completed
+last_cmd: curl -s http://localhost:3000/api/debug/execution-state-compact
+execution: status=completed, step=5/5
+
+===== COPIED TO CLIPBOARD =====
+tmp/jarvis-ops-lite.txt
+
+----- LAST PLAIN -----
+{"ok":true,"summary":{"currentExecutionId":"dfde6b73-06b8-4f29-a403-97dcde7503de","currentLabel":"ops-master-flow","currentStatus":"completed","currentStepIndex":5,"currentTotalSteps":5,"currentStepLabel":"ops master flow complete","currentStepStatus":"completed","prevExecutionId":"dfde6b73-06b8-4f29-a403-97dcde7503de","prevLabel":"ops-master-flow","prevStatus":"running","prevStepIndex":3,"prevTotalSteps":5,"prevStepLabel":"control summary checked","prevStepStatus":"completed"}}
+
+
+----- PM2 LOGS LAST 40 -----
+[TAILING] Tailing last 40 lines for [jarvis] process (change the value with --lines option)
+/Users/kait/.pm2/logs/jarvis-error.log last 40 lines:
+/Users/kait/.pm2/logs/jarvis-out.log last 40 lines:
+0|jarvis   | {"level":30,"time":1775662962111,"service":"jarvis-core","method":"GET","url":"/api/debug/control-summary-compact","statusCode":200,"durationMs":0,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663127707,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":2,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663127728,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663127740,"service":"jarvis-core","method":"GET","url":"/api/debug/control-summary-compact","statusCode":200,"durationMs":3,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663127752,"service":"jarvis-core","method":"GET","url":"/api/debug/execution-state-compact","statusCode":200,"durationMs":3,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663127971,"service":"jarvis-core","method":"POST","url":"/api/debug/terminal-request/health","statusCode":200,"durationMs":3,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663128061,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663128135,"service":"jarvis-core","method":"POST","url":"/api/debug/terminal-confirm/8c542b74-3975-45fc-a3ab-5d3c12893fa2","statusCode":200,"durationMs":131,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663128198,"service":"jarvis-core","method":"POST","url":"/api/debug/terminal-request/execution_state_compact","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663128260,"service":"jarvis-core","method":"GET","url":"/api/debug/execution-state-compact","statusCode":200,"durationMs":0,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663128327,"service":"jarvis-core","method":"POST","url":"/api/debug/terminal-confirm/f04c2a73-0071-4fdd-9cad-0f24991eda02","statusCode":200,"durationMs":96,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663128338,"service":"jarvis-core","method":"GET","url":"/api/debug/execution-state-compact","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | 
+0|jarvis   | > jarvis-core@0.1.0 start
+0|jarvis   | > node dist/index.js
+0|jarvis   | 
+0|jarvis   | {"level":30,"time":1775663258827,"service":"jarvis-core","dbPath":"/Users/kait/jarvis-core/data/jarvis.sqlite","msg":"SQLite initialized"}
+0|jarvis   | {"level":30,"time":1775663258831,"service":"jarvis-core","port":3000,"environment":"development","msg":"Jarvis backend listening"}
+0|jarvis   | {"level":30,"time":1775663259797,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":11,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663259814,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663259830,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663259844,"service":"jarvis-core","method":"GET","url":"/api/debug/control-summary-compact","statusCode":200,"durationMs":5,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663259856,"service":"jarvis-core","method":"GET","url":"/api/debug/execution-state-compact","statusCode":200,"durationMs":3,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663260016,"service":"jarvis-core","method":"POST","url":"/api/debug/terminal-request/health","statusCode":200,"durationMs":5,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663260098,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":0,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663260174,"service":"jarvis-core","method":"POST","url":"/api/debug/terminal-confirm/7342f3e2-84fc-4187-9864-6f04a8ef6742","statusCode":200,"durationMs":126,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663260240,"service":"jarvis-core","method":"POST","url":"/api/debug/terminal-request/execution_state_compact","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663260306,"service":"jarvis-core","method":"GET","url":"/api/debug/execution-state-compact","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663260370,"service":"jarvis-core","method":"POST","url":"/api/debug/terminal-confirm/e184e706-f137-4a97-87bd-92976614df98","statusCode":200,"durationMs":97,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663260380,"service":"jarvis-core","method":"GET","url":"/api/debug/execution-state-compact","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663455946,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":10,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663455960,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":2,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663456127,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663456139,"service":"jarvis-core","method":"GET","url":"/api/debug/control-summary-compact","statusCode":200,"durationMs":4,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663456149,"service":"jarvis-core","method":"GET","url":"/api/debug/execution-state-compact","statusCode":200,"durationMs":2,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663527145,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":3,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663527157,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":0,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663527366,"service":"jarvis-core","method":"GET","url":"/health","statusCode":200,"durationMs":1,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663527377,"service":"jarvis-core","method":"GET","url":"/api/debug/control-summary-compact","statusCode":200,"durationMs":4,"msg":"HTTP request completed"}
+0|jarvis   | {"level":30,"time":1775663527387,"service":"jarvis-core","method":"GET","url":"/api/debug/execution-state-compact","statusCode":200,"durationMs":2,"msg":"HTTP request completed"}
+

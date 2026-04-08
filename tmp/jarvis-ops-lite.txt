@@ -1,0 +1,7 @@
+===== JARVIS OPS LITE =====
+health: ok
+pm2: online
+terminal_stage: direct_run
+execution_from_control: completed
+last_cmd: curl -s http://localhost:3000/api/debug/execution-state-compact
+execution: status=completed, step=5/5

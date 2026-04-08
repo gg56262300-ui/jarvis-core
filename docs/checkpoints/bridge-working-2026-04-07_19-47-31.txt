@@ -1,0 +1,22 @@
+JARVIS BRIDGE WORKING CHECKPOINT
+created_at=2026-04-07_19-47-31
+
+MODE
+manual + tunnel/state
+
+CONFIRMED
+- local bridge 200 OK
+- public bridge 200 OK
+- public health 200 OK
+- cloudflared running
+- token auth working
+
+PUBLIC URL
+https://prospect-tom-lbs-hood.trycloudflare.com
+
+NEXT GAP
+- ChatGPT side does not yet consume bridge automatically
+
+CURRENT STATUS
+- poolautomaatika: 90%
+- backend bridge path: working

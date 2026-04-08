@@ -1,0 +1,8 @@
+===== COMMAND =====
+printf "hello from jarvis copy run
+second line
+"
+
+===== OUTPUT =====
+hello from jarvis copy run
+second line

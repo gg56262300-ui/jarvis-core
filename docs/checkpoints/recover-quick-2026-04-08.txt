@@ -1,0 +1,25 @@
+RECOVER QUICK CHECKPOINT
+
+VALMIS:
+- recover:quick töötab
+- ühe käsuga tehakse:
+  - varukoopia
+  - Jarvise uus käivitus / taaskäivitus
+  - oodatakse, kuni Jarvis on valmis
+  - näidatakse väga lühike seis
+
+KINNITATUD TULEMUS:
+- varukoopia tehti
+- Jarvis käivitati uuesti
+- Jarvis oodati valmis
+- health: 🟢 korras
+- pm2: 🟢 online
+- execution: 🟢 completed
+- üldseis: 🟢 KORRAS
+
+PÕHIKÄSUD:
+- npm run recover:quick -- 30
+- npm run health:status -- 30
+- npm run health:report -- 30
+- npm run restart:quick -- 30
+- npm run ops:quick -- 30

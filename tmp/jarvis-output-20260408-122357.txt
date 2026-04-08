@@ -1,0 +1,17 @@
+===== COMMAND =====
+npm run control:check
+
+===== OUTPUT =====
+
+> jarvis-core@0.1.0 control:check
+> ./scripts/jarvis-control-check.sh
+
+===== CONTROL CHECK =====
+{"ok":true,"summary":{"cwd":"/Users/kait/jarvis-core","terminalStage":"direct_run","terminalStatus":"completed","terminalUpdatedAt":"2026-04-08T09:52:58.182Z","terminalCommand":"curl -s http://localhost:3000/api/debug/control-summary","executionStatus":"completed","executionStep":3,"executionTotalSteps":3,"pendingId":null,"pendingRequestId":null,"pendingStatus":null,"currentPwd":"/Users/kait/jarvis-core","currentExitCode":0}}
+
+===== PM2 STATUS =====
+┌────┬───────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ jarvis    │ default     │ N/A     │ fork    │ 42211    │ 105s   │ 6407 │ online    │ 0%       │ 58.6mb   │ kait     │ disabled │
+└────┴───────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘

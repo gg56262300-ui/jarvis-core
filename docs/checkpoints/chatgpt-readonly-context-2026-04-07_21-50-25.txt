@@ -1,0 +1,13 @@
+CHATGPT READONLY CONTEXT CHECKPOINT
+created_at=2026-04-07_21-50-25
+
+CONFIRMED
+- chatgpt-readonly-context endpoint works
+- cwd available
+- currentState available
+- currentLast available
+- allowed commands list available
+
+STATUS
+- poolautomaatika: 91.5%
+- remaining gap: ChatGPT does not yet read this automatically

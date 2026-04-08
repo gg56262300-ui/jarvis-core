@@ -1,0 +1,7 @@
+{
+  "time": "2026-04-08 17:47:40",
+  "pwd": "/Users/kait/jarvis-core",
+  "cmd": "curl -s http://localhost:3000/health",
+  "exit_code": 0,
+  "output": "{\"status\":\"ok\",\"service\":\"jarvis-core\",\"timestamp\":\"2026-04-08T15:47:40.098Z\"}"
+}

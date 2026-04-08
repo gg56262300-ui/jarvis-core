@@ -1,0 +1,23 @@
+OFFICIAL WORK MODE
+
+Current official mode:
+manual + tunnel/state
+
+Use this mode when:
+- Terminal direct reading via Mac app is not confirmed
+- Stable work is more important than experiments
+- Work must continue without opening new branches
+
+Confirmed stable checks:
+- health confirm
+- pwd confirm
+- pm2_status_jarvis confirm
+- jarvis_logs_quick confirm
+- jarvis_snapshot confirm
+
+Confirmed safety:
+- TERMINAL_RUN_NOT_ALLOWED works
+- TERMINAL_RUN_CONFIRMATION_REQUIRED works
+- policy metadata works
+- rollback current/prev state works
+- rollback current/prev last works

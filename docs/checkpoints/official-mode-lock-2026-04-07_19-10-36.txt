@@ -1,0 +1,83 @@
+JARVIS OFFICIAL MODE LOCK
+created_at=2026-04-07_19-10-36
+
+OFFICIAL MODE
+OFFICIAL WORK MODE
+
+Current official mode:
+manual + tunnel/state
+
+Use this mode when:
+- Terminal direct reading via Mac app is not confirmed
+- Stable work is more important than experiments
+- Work must continue without opening new branches
+
+Confirmed stable checks:
+- health confirm
+- pwd confirm
+- pm2_status_jarvis confirm
+- jarvis_logs_quick confirm
+- jarvis_snapshot confirm
+
+Confirmed safety:
+- TERMINAL_RUN_NOT_ALLOWED works
+- TERMINAL_RUN_CONFIRMATION_REQUIRED works
+- policy metadata works
+- rollback current/prev state works
+- rollback current/prev last works
+
+CURRENT TARGET
+NEXT TARGET
+
+Mode:
+manual + tunnel/state
+
+Do next:
+1) lock current stable mode as official working mode
+2) do not touch Mac app path now
+3) do not open new branches
+4) work from stable baseline only
+
+STABLE BASELINE
+STABLE BASELINE 2026-04-07
+
+Mode:
+manual + tunnel/state
+
+Confirmed working:
+- health confirm
+- pwd confirm
+- pm2_status_jarvis confirm
+- jarvis_logs_quick confirm
+- jarvis_snapshot confirm
+
+Terminal path:
+- /Users/kait/jarvis-core
+
+Backup:
+- jarvis-core-2026-04-07_18-47-58.zip
+
+GUARDRAIL STATUS
+GUARDRAIL STATUS 2026-04-07
+
+Confirmed:
+- TERMINAL_RUN_NOT_ALLOWED works
+- TERMINAL_RUN_CONFIRMATION_REQUIRED works
+- policy metadata in run response works
+- pwd restored to requiresConfirmation: false
+- pwd direct run works again
+
+ROLLBACK STATUS
+ROLLBACK STATUS 2026-04-07
+
+Confirmed:
+- terminal-state.json updates
+- terminal-state-prev.json keeps previous state
+- terminal-last.json updates
+- terminal-prev.json keeps previous capture
+
+Live check:
+- current state = pwd
+- prev state = health
+- current last = pwd
+- prev last = health

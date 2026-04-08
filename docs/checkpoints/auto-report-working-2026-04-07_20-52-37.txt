@@ -1,0 +1,15 @@
+AUTO REPORT WORKING CHECKPOINT
+created_at=2026-04-07_20-52-37
+
+CONFIRMED
+- one command runs jarvis_snapshot
+- one command runs min report
+- one command returns operational state
+
+SCRIPT
+./scripts/jarvis-auto-report.sh
+
+STATUS
+- manual typing reduced by one step
+- poolautomaatika overall still 90%
+- remaining gap: ChatGPT side still does not auto-consume without user trigger

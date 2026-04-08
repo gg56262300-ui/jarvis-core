@@ -1,0 +1,12 @@
+SECURITY ROTATION CHECKPOINT
+created_at=2026-04-07_19-49-53
+
+DONE
+- bridge token rotated after chat exposure
+- pm2 restarted with updated env
+- local bridge rechecked
+- public bridge rechecked
+
+TODO MANUAL
+- rotate OPENAI_API_KEY in OpenAI dashboard
+- rotate GOOGLE_CLIENT_SECRET in Google Cloud

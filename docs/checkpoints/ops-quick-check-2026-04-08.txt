@@ -1,0 +1,22 @@
+OPS QUICK CHECKPOINT
+
+VALMIS:
+- ops:quick töötab
+- enne kontrolli oodatakse, kuni Jarvis on valmis
+- ühe käsuga tehakse:
+  - ops:lite
+  - health plain
+  - execution_state plain
+
+KINNITATUD TULEMUS:
+- Jarvis oli valmis
+- ops:lite andis lühikese üldseisu
+- health plain töötas
+- execution_state plain töötas
+
+PÕHIKÄSUD:
+- npm run ops:quick -- 30
+- npm run ops:lite
+- npm run confirm:plain:ready -- control_summary_compact 30
+- npm run confirm:plain:ready -- execution_state_compact 30
+- npm run confirm:plain:ready -- health 30

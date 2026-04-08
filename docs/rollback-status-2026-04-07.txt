@@ -1,0 +1,13 @@
+ROLLBACK STATUS 2026-04-07
+
+Confirmed:
+- terminal-state.json updates
+- terminal-state-prev.json keeps previous state
+- terminal-last.json updates
+- terminal-prev.json keeps previous capture
+
+Live check:
+- current state = pwd
+- prev state = health
+- current last = pwd
+- prev last = health

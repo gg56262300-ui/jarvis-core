@@ -1,0 +1,7 @@
+===== TERMINAL CAPTURE =====
+time: 2026-04-08 13:06:14
+pwd: /Users/kait/jarvis-core
+cmd: curl -s http://localhost:3000/api/debug/execution-state-compact
+----- OUTPUT START -----
+{"ok":true,"summary":{"currentExecutionId":"07524e12-6e22-44ca-92d3-9e4d3008de74","currentLabel":"ops-master-flow","currentStatus":"completed","currentStepIndex":4,"currentTotalSteps":4,"currentStepLabel":"ops master flow complete","currentStepStatus":"completed","prevExecutionId":"07524e12-6e22-44ca-92d3-9e4d3008de74","prevLabel":"ops-master-flow","prevStatus":"running","prevStepIndex":3,"prevTotalSteps":4,"prevStepLabel":"control summary checked","prevStepStatus":"completed"}}----- OUTPUT END -----
+exit_code: 0

@@ -1,0 +1,17 @@
+VOICE CALENDAR CREATE CHECKPOINT
+
+VALMIS:
+- häälkäsk / tekstkäsk "lisa kalendrisse ..." töötab
+- homme + kell + kuni + pealkiri vorm töötab
+- sündmus lisatakse Google Calendrisse
+
+KINNITATUD TULEMUS:
+- käsk: lisa kalendrisse homme kell 12 kuni 13 jarvis häältest
+- tulemus: sündmus loodi edukalt
+- vastus tagastati voice turn kaudu
+
+PÕHIKÄSUD:
+- lisa kalendrisse homme kell 12 kuni 13 pealkiri
+- näita kalendrit
+- GET /api/calendar/upcoming
+- POST /api/calendar/events

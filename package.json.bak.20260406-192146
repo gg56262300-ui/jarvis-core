@@ -1,0 +1,50 @@
+{
+  "name": "jarvis-core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend foundation for Jarvis, a personal AI automation assistant.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:gmail-voice": "sh ./scripts/test-gmail-voice.sh",
+    "test:gmail-v2": "sh ./scripts/test-gmail-v2.sh",
+    "test:gmail-v3": "sh ./scripts/test-gmail-v3.sh",
+    "health": "./scripts/health-check.sh",
+    "health:baseline": "./scripts/health-baseline-check.sh",
+    "backup": "sh ./scripts/backup-jarvis.sh",
+    "preflight": "npm run health && npm run health:baseline && npm run backup",
+    "latency": "./scripts/latency-snapshot.sh",
+    "dev:hard-clean": "./scripts/dev-hard-clean.sh",
+    "dev:stop": "./scripts/dev-stop.sh",
+    "dev:status": "./scripts/dev-status.sh",
+    "smoke": "./scripts/smoke.sh",
+    "smoke:google": "./scripts/smoke-google.sh",
+    "check:all": "./scripts/check-all.sh",
+    "smoke:voice:google": "./scripts/smoke-voice-google.sh",
+    "validate:command": "./scripts/validate-command.sh",
+    "rrr": "./scripts/rrr-basic.sh"
+  },
+  "dependencies": {
+    "@google-cloud/local-auth": "^2.1.0",
+    "@sentry/node": "^10.47.0",
+    "better-sqlite3": "^11.8.1",
+    "bullmq": "^5.73.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "googleapis": "^105.0.0",
+    "ioredis": "^5.10.1",
+    "openai": "^6.33.0",
+    "pino": "^9.6.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

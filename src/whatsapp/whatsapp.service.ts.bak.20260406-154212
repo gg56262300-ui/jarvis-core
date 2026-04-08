@@ -1,0 +1,42 @@
+import { CrmService } from '../crm/crm.service.js';
+import type { WhatsappInboundMessage } from './whatsapp.types.js';
+
+export class WhatsappService {
+  private readonly crmService = new CrmService();
+
+  handleInboundMessage(input: WhatsappInboundMessage) {
+    const normalizedPhone = input.phone.replace(/[^\d+]/g, '').trim();
+
+    if (!normalizedPhone) {
+      return {
+        status: 'error' as const,
+        responseText: 'WhatsApp inbound sõnumis puudub telefoninumber.',
+      };
+    }
+
+    const lead = this.crmService.createLead({
+      source: 'whatsapp',
+      phone: normalizedPhone,
+      name: input.name,
+      tag: 'whatsapp-inbound',
+      notes: input.message ?? null,
+    });
+
+    const messageRecord =
+      input.message && input.message.trim()
+        ? this.crmService.addLeadMessage({
+            leadId: lead.id,
+            channel: 'whatsapp',
+            direction: 'inbound',
+            message: input.message.trim(),
+          })
+        : null;
+
+    return {
+      status: 'ready' as const,
+      responseText: `WhatsApp lead salvestatud: ${lead.phone}.`,
+      lead,
+      messageRecord,
+    };
+  }
+}

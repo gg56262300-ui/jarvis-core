@@ -1,0 +1,27 @@
+JARVIS OFFICIAL WORKFLOW
+
+1) Direct safe run:
+POST /api/debug/terminal-run/:id
+
+2) Confirmation flow:
+POST /api/debug/terminal-request/:id
+GET  /api/debug/terminal-pending
+POST /api/debug/terminal-confirm/:requestId
+
+3) Read current terminal state:
+GET /api/debug/terminal-state
+GET /api/debug/chatgpt-readonly-context
+
+4) Rollback:
+POST /api/debug/terminal-restore-prev
+GET  /api/debug/terminal-restore-check
+
+5) Multistep execution state:
+POST /api/debug/execution/start
+POST /api/debug/execution/step
+POST /api/debug/execution/complete
+GET  /api/debug/execution/state
+
+Rule:
+Do not rely on normal ChatGPT app direct terminal auto-read.
+Use the backend API/state path as the official control path.

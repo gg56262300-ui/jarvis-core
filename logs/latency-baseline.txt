@@ -1,0 +1,4 @@
+Backend: very fast
+Gmail API: ~784 ms
+OpenAI voice: ~1434 ms
+Main bottleneck: AI latency

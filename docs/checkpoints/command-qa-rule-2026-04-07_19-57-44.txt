@@ -1,0 +1,33 @@
+COMMAND QA RULE
+created_at=2026-04-07_19-57-44
+
+RULE
+Every command block may be long, but it must be: ACTION + CHECK + STOP-IF-WRONG
+
+REQUIRED
+- one main action only
+- one objective check immediately after action
+- if check fails: stop, do not continue chain
+- restart/tunnel/public/token/pm2 blocks must include local check before public check
+
+FORBIDDEN
+- long unchecked blind command chains
+- moving to next step before verifying current result
+- assuming URL/token/process is correct without check
+
+GOAL
+- reduce command defects
+- reduce rework
+- improve speed by catching errors immediately
+
+LONG BLOCK POLICY
+- long command blocks are allowed and preferred when they reduce manual work
+- each critical step inside a long block must have an objective check
+- if a required check fails, the chain must stop instead of continuing blindly
+
+RESULT POLICY
+- command quality is measured by real positive outcome, not by command length
+- commands may be long if that reaches the goal faster and safely
+- each command block must aim for a real working result
+- negative result is not an acceptable end state; if result is negative, continue with fix-until-positive workflow
+- a command is considered successful only when the expected positive state is objectively confirmed

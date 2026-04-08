@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="et">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#103226" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Jarvis</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon.svg" />
+    <link rel="stylesheet" href="/styles.css?v=1775589985" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="panel">
+        <p class="eyebrow">Jarvis</p>
+        <h1>Räägi minuga eesti keeles</h1>
+        <p class="subtitle">
+          See on Jarvise esimene mobiilne häälpaneel. Vajuta suurt nuppu, räägi ja loe vastust kohe ekraanilt.
+        </p>
+
+        <div class="status-card">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">Ootel</span>
+        </div>
+
+        <div class="actions">
+          <button id="talk-button" class="talk-button" type="button">Hoia rääkimiseks</button>
+          <button id="stop-button" class="secondary-button" type="button">Peata</button>
+        </div>
+
+        <section class="card">
+          <div class="card-header">
+            <h2>Transkriptsioon</h2>
+            <span id="input-mode-label">hääl</span>
+          </div>
+          <p id="transcript" class="content muted">Sinu jutt ilmub siia.</p>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <h2>Jarvise vastus</h2>
+            <span>et-EE</span>
+          </div>
+          <p id="response" class="content">Jarvis on valmis.</p>
+        </section>
+
+        <section class="card fallback-card">
+          <div class="card-header">
+            <h2>Varuvariant</h2>
+            <span>tekst</span>
+          </div>
+          <label class="label" for="text-input">Kui brauser ei toeta häälkäsku, sisesta küsimus siia.</label>
+          <textarea
+            id="text-input"
+            class="text-input"
+            rows="3"
+            placeholder="Näiteks: Lisa mulle homseks meeldetuletus helistada kliendile."
+          ></textarea>
+          <button id="send-text-button" class="secondary-button full-width" type="button">Saada tekst</button>
+        </section>
+
+        <button id="install-button" class="install-button" type="button" hidden>Lisa avakuvale</button>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js?v=1775590353"></script>
+  </body>
+</html>

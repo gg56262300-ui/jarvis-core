@@ -1,0 +1,22 @@
+HEALTH STATUS CHECKPOINT
+
+VALMIS:
+- health:status töötab
+- ühe käsuga tehakse:
+  - oodatakse, kuni Jarvis on valmis
+  - kontrollitakse health
+  - kontrollitakse PM2 seisu
+  - kontrollitakse execution lõppseisu
+  - antakse väga lühike lõpphinnang
+
+KINNITATUD TULEMUS:
+- üldseis: 🟢 KORRAS
+- health: 🟢 korras
+- pm2: 🟢 online
+- execution: 🟢 completed
+
+PÕHIKÄSUD:
+- npm run health:status -- 30
+- npm run health:report -- 30
+- npm run restart:quick -- 30
+- npm run ops:quick -- 30

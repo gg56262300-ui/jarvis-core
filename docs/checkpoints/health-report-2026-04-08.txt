@@ -1,0 +1,24 @@
+HEALTH REPORT CHECKPOINT
+
+VALMIS:
+- health:report töötab
+- ühe käsuga tehakse:
+  - oodatakse, kuni Jarvis on valmis
+  - health kontroll
+  - PM2 seis
+  - ops:lite kokkuvõte
+  - viimane plain-väljund
+  - viimased PM2 logid
+
+KINNITATUD TULEMUS:
+- health oli korras
+- PM2 seis tuli õigesti välja
+- ops:lite töötas
+- viimane plain-väljund tuli välja
+- viimased logid tulid välja
+
+PÕHIKÄSUD:
+- npm run health:report -- 30
+- npm run restart:quick -- 30
+- npm run ops:quick -- 30
+- npm run confirm:plain:ready -- control_summary_compact 30

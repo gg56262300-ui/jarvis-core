@@ -1,0 +1,12 @@
+model = "gpt-5.4"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = false
+
+[history]
+persistence = "save-all"
+
+[tools]
+web_search = true

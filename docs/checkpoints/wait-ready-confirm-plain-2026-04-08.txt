@@ -1,0 +1,20 @@
+WAIT-READY CHECKPOINT
+
+VALMIS:
+- wait:ready töötab
+- confirm:plain:ready töötab
+- pärast uut käivitust oodatakse enne testi, kuni Jarvis on päriselt valmis
+
+KINNITATUD TULEMUS:
+- terminalStage=direct_run
+- terminalStatus=completed
+- terminalUpdatedAt on värske
+- pendingId=null
+- pendingRequestId=null
+- pendingStatus=null
+
+PÕHIKÄSUD:
+- npm run wait:ready -- 30
+- npm run confirm:plain:ready -- control_summary_compact 30
+- npm run confirm:plain:ready -- execution_state_compact 30
+- npm run confirm:plain:ready -- health 30
