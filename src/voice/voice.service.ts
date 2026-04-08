@@ -137,6 +137,46 @@ export class VoiceService {
       };
     }
 
+    if (normalized === 'mis on mu järgmine sündmus') {
+      const calendarResult = await this.calendarService.listUpcomingEvents(1);
+
+      if (calendarResult.status !== 'ready') {
+        return {
+          transcript,
+          responseText: calendarResult.responseText,
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      const nextEvent = calendarResult.events[0] ?? null;
+
+      if (!nextEvent) {
+        return {
+          transcript,
+          responseText: 'Sul ei ole ühtegi tulevast sündmust.',
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      const timeMatch = nextEvent.startText.match(/\b(\d{1,2}:\d{2})\b/u);
+      const startsText = timeMatch ? `kell ${timeMatch[1]}` : nextEvent.startText;
+
+      return {
+        transcript,
+        responseText: `Sinu järgmine sündmus on ${nextEvent.summary}, algab ${startsText}.`,
+        locale: 'et-EE',
+        inputMode: input.source,
+        outputMode: 'text',
+        status: 'speaking',
+      };
+    }
+
     if (weatherPlaceQuery !== null) {
       try {
         const weatherResult = await this.weatherService.getWeather(weatherPlaceQuery);
