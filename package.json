@@ -56,8 +56,13 @@
     "lint": "eslint src --ext .ts",
     "gate:voice": "vitest run tests/voice-routing.test.ts",
     "gate:full": "npm run build && npm run lint && npm run gate:voice && node scripts/full-chain-gate.mjs",
-    "gate:fast": "npm run build && npm run lint && npm run gate:voice && npm run test:calendar-crud",
-    "test:calendar-crud": "vitest run tests/calendar-crud.test.ts"
+    "gate:fast": "npm run build && npm run lint && npm run gate:voice && npm run test:calendar-crud && npm run test:reminder-routing && npm run test:reminder-parser",
+    "test:calendar-crud": "vitest run tests/calendar-crud.test.ts",
+    "test:playwright-calendar": "playwright test playwright-tests/calendar-next.spec.ts",
+    "test:reminder-routing": "vitest run tests/reminder-routing.test.ts",
+    "test:reminder-parser": "vitest run tests/reminder-parser.test.ts",
+    "state:restart-smoke": "node scripts/restart-and-smoke.mjs",
+    "gate:stable": "npm run gate:fast && npm run state:restart-smoke"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^2.1.0",
@@ -74,6 +79,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.59.1",
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^5.0.1",
     "@types/node": "^22.13.10",

@@ -41,13 +41,15 @@ export const parseReminderCommand = (
     };
   }
 
-  const dueAtMatch =
-    title.match(
-      /^homme(?:\s+(hommikul|päeval|paeval|õhtul|ohtul))?\s+kell\s+([^\s]+)\s+(.+)$/i,
-    ) ??
-    title.match(
-      /^(.+)\s+homme(?:\s+(hommikul|päeval|paeval|õhtul|ohtul))?\s+kell\s+([^\s]+)$/i,
-    );
+  const startsWithTomorrow = /^homme\b/i.test(title);
+
+  const dueAtMatch = startsWithTomorrow
+    ? title.match(
+        /^homme(?:\s+(hommikul|päeval|paeval|õhtul|ohtul))?\s+kell\s+([^\s]+)\s+(.+)$/i,
+      )
+    : title.match(
+        /^(.+)\s+homme(?:\s+(hommikul|päeval|paeval|õhtul|ohtul))?\s+kell\s+([^\s]+)$/i,
+      );
 
   if (!dueAtMatch) {
     return {
@@ -60,10 +62,10 @@ export const parseReminderCommand = (
   let rawHourToken;
   let reminderTitle;
 
-  if (normalizeEstonianToken(dueAtMatch[1]) == 'homme') {
-    rawTimeOfDay = dueAtMatch[2];
-    rawHourToken = dueAtMatch[3];
-    reminderTitle = dueAtMatch[4];
+  if (startsWithTomorrow) {
+    rawTimeOfDay = dueAtMatch[1];
+    rawHourToken = dueAtMatch[2];
+    reminderTitle = dueAtMatch[3];
   } else {
     reminderTitle = dueAtMatch[1];
     rawTimeOfDay = dueAtMatch[2];
@@ -74,7 +76,7 @@ export const parseReminderCommand = (
 
   if (parsedHour === null) {
     return {
-      title: reminderTitle.trim(),
+      title: (reminderTitle ?? '').trim(),
       dueAtParseFailed: true,
     };
   }
@@ -84,7 +86,7 @@ export const parseReminderCommand = (
   dueDate.setHours(parsedHour, 0, 0, 0);
 
   return {
-    title: reminderTitle.trim(),
+    title: (reminderTitle ?? '').trim(),
     dueAt: formatIsoWithOffset(dueDate),
     dueAtParseFailed: false,
   };
