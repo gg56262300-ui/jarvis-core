@@ -11,6 +11,7 @@ import { logger } from '../shared/logger/logger.js';
 import {
   createCalendarEvent as createGoogleCalendarEvent,
   deleteUpcomingEventByTitle as deleteGoogleUpcomingEventByTitle,
+  listTodayEvents as listGoogleTodayEvents,
   listUpcomingEvents as listGoogleUpcomingEvents,
   updateUpcomingEventByTitle as updateGoogleUpcomingEventByTitle,
 } from '../modules/calendar/services/googleCalendar.service.js';
@@ -285,6 +286,40 @@ export class CalendarService {
       };
     } catch (error) {
       logger.warn({ err: error }, 'Google Calendar today events request failed');
+
+      const client = await this.createOAuthClient();
+      return client ? this.buildAuthorizationRequiredResult(client) : this.buildConfigurationRequiredResult();
+    }
+  }
+
+  async listAllTodayEvents(limit = 20): Promise<CalendarEventsResult> {
+    try {
+      const googleEvents = await listGoogleTodayEvents(50);
+
+      const events = googleEvents.slice(0, limit).map((item) => ({
+        summary: item.summary?.trim() || 'Nimetu sündmus',
+        startText: this.formatEventStart(item.start || null),
+      }));
+
+      if (events.length === 0) {
+        return {
+          status: 'ready',
+          responseText: 'Sul ei ole täna ühtegi kalendrisündmust.',
+          events,
+        };
+      }
+
+      const responseText = `Tänased kalendrisündmused: ${events
+        .map((event) => `${event.startText} ${event.summary}`)
+        .join('; ')}.`;
+
+      return {
+        status: 'ready',
+        responseText,
+        events,
+      };
+    } catch (error) {
+      logger.warn({ err: error }, 'Google Calendar all-today events request failed');
 
       const client = await this.createOAuthClient();
       return client ? this.buildAuthorizationRequiredResult(client) : this.buildConfigurationRequiredResult();

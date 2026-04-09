@@ -137,46 +137,6 @@ export class VoiceService {
       };
     }
 
-    if (normalized === 'kas mul on täna veel midagi' || normalized === 'kas mul on täna midagi veel') {
-      const calendarResult = await this.calendarService.listTodayEvents(20);
-
-      if (calendarResult.status !== 'ready') {
-        return {
-          transcript,
-          responseText: calendarResult.responseText,
-          locale: 'et-EE',
-          inputMode: input.source,
-          outputMode: 'text',
-          status: 'speaking',
-        };
-      }
-
-      if (calendarResult.events.length === 0) {
-        return {
-          transcript,
-          responseText: 'Sul ei ole täna enam ühtegi sündmust.',
-          locale: 'et-EE',
-          inputMode: input.source,
-          outputMode: 'text',
-          status: 'speaking',
-        };
-      }
-
-      const remaining = calendarResult.events
-        .slice(0, 5)
-        .map((event) => `${event.startText} ${event.summary}`)
-        .join('; ');
-
-      return {
-        transcript,
-        responseText: `Jah, sul on täna veel: ${remaining}.`,
-        locale: 'et-EE',
-        inputMode: input.source,
-        outputMode: 'text',
-        status: 'speaking',
-      };
-    }
-
     if (weatherPlaceQuery !== null) {
       try {
         const weatherResult = await this.weatherService.getWeather(weatherPlaceQuery);
@@ -262,9 +222,48 @@ export class VoiceService {
       };
     }
 
+    if (normalized === 'kas mul on täna veel midagi' || normalized === 'kas mul on täna midagi veel') {
+      const calendarResult = await this.calendarService.listTodayEvents(20);
+
+      if (calendarResult.status !== 'ready') {
+        return {
+          transcript,
+          responseText: calendarResult.responseText,
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      if (calendarResult.events.length === 0) {
+        return {
+          transcript,
+          responseText: 'Sul ei ole täna enam ühtegi sündmust.',
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      const remaining = calendarResult.events
+        .slice(0, 5)
+        .map((event) => `${event.startText} ${event.summary}`)
+        .join('; ');
+
+      return {
+        transcript,
+        responseText: `Jah, sul on täna veel: ${remaining}.`,
+        locale: 'et-EE',
+        inputMode: input.source,
+        outputMode: 'text',
+        status: 'speaking',
+      };
+    }
+
     if (
       normalized === 'mis mul täna kalendris on' ||
-      normalized === 'mis mul täna on' ||
       normalized === 'näita tänased sündmused' ||
       normalized === 'näita tänaseid sündmusi' ||
       normalized === 'näita tänast kalendrit' ||
@@ -274,6 +273,51 @@ export class VoiceService {
 
       const responseText = this.buildTodayCalendarVoiceSummary(calendarResult.responseText);
       const speechText = this.buildTodayCalendarSpeechSummary(calendarResult.responseText);
+
+      return {
+        transcript,
+        responseText,
+        displayText: responseText,
+        speechText,
+        locale: 'et-EE',
+        inputMode: input.source,
+        outputMode: 'text',
+        status: 'speaking',
+      };
+    }
+
+    if (normalized === 'mis mul täna on') {
+      const calendarResult = await this.calendarService.listAllTodayEvents(20);
+
+      if (calendarResult.status !== 'ready') {
+        return {
+          transcript,
+          responseText: calendarResult.responseText,
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      if (calendarResult.events.length === 0) {
+        return {
+          transcript,
+          responseText: 'Sul ei ole täna ühtegi sündmust.',
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      const items = calendarResult.events
+        .slice(0, 10)
+        .map((event) => `${event.startText} ${event.summary}`)
+        .join('; ');
+
+      const responseText = `Täna on sul: ${items}.`;
+      const speechText = this.buildTodayCalendarSpeechSummary(`Tänased kalendrisündmused: ${items}.`);
 
       return {
         transcript,

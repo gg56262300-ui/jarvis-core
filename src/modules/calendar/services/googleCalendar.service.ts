@@ -52,6 +52,35 @@ export async function listUpcomingEvents(maxResults = 10): Promise<CalendarEvent
   }));
 }
 
+export async function listTodayEvents(maxResults = 50): Promise<CalendarEventItem[]> {
+  const auth = await createAuthorizedClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const result = await calendar.events.list({
+    calendarId: 'primary',
+    timeMin: startOfDay.toISOString(),
+    timeMax: endOfDay.toISOString(),
+    maxResults,
+    singleEvents: true,
+    orderBy: 'startTime',
+  });
+
+  const events = result.data.items ?? [];
+
+  return events.map((event) => ({
+    id: event.id ?? '',
+    summary: event.summary ?? '(no title)',
+    start: event.start?.dateTime || event.start?.date || '',
+    end: event.end?.dateTime || event.end?.date || '',
+  }));
+}
+
 export async function createCalendarEvent(input: CreateCalendarEventInput) {
   const auth = await createAuthorizedClient();
   const calendar = google.calendar({ version: 'v3', auth });
