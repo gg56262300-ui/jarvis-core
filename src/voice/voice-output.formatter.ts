@@ -101,7 +101,7 @@ export const applyVoiceOutputFormatting = (
 };
 
 const normalizeEndingPunctuation = (text: string) => {
-  return text.replace(/([.!?])(?:\s*\1)+$/u, '$1');
+  return text.replace(/([.!?])(?:\s*[.!?])+$/u, '$1');
 };
 
 const normalizeWhitespace = (text: string) => {
