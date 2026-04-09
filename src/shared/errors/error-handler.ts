@@ -9,6 +9,7 @@ export const errorHandler = (
   response: Response,
   _next: NextFunction,
 ) => {
+  void _next;
   const appError = error instanceof AppError ? error : new AppError('Unexpected error');
 
   logger.error(
