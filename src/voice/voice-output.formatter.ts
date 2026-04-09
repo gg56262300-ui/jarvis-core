@@ -90,12 +90,18 @@ export const applyVoiceOutputFormatting = (
 ): VoiceTurnResult => {
   const formatted = formatVoiceOutputTexts(result.responseText);
 
+  const speechText = normalizeEndingPunctuation(result.speechText ?? formatted.speechText);
+
   return {
     ...result,
     responseText: result.displayText ?? formatted.displayText,
     displayText: result.displayText ?? formatted.displayText,
-    speechText: result.speechText ?? formatted.speechText,
+    speechText,
   };
+};
+
+const normalizeEndingPunctuation = (text: string) => {
+  return text.replace(/([.!?])(?:\s*\1)+$/u, '$1');
 };
 
 const normalizeWhitespace = (text: string) => {
