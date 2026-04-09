@@ -51,7 +51,13 @@
     "restart:quick": "./scripts/jarvis-restart-quick-check.sh",
     "health:report": "./scripts/jarvis-health-report.sh",
     "health:status": "./scripts/jarvis-health-status.sh",
-    "recover:quick": "./scripts/jarvis-recover-quick.sh"
+    "recover:quick": "./scripts/jarvis-recover-quick.sh",
+    "prepare": "husky",
+    "lint": "eslint src --ext .ts",
+    "gate:voice": "vitest run tests/voice-routing.test.ts",
+    "gate:full": "npm run build && npm run lint && npm run gate:voice && node scripts/full-chain-gate.mjs",
+    "gate:fast": "npm run build && npm run lint && npm run gate:voice && npm run test:calendar-crud",
+    "test:calendar-crud": "vitest run tests/calendar-crud.test.ts"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^2.1.0",
@@ -64,7 +70,7 @@
     "ioredis": "^5.10.1",
     "openai": "^6.33.0",
     "pino": "^9.6.0",
-    "zod": "^3.24.2"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -72,8 +78,10 @@
     "@types/express": "^5.0.1",
     "@types/node": "^22.13.10",
     "eslint": "^10.2.0",
+    "husky": "^9.1.7",
     "tsx": "^4.19.3",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.58.1"
+    "typescript-eslint": "^8.58.1",
+    "vitest": "^4.1.4"
   }
 }

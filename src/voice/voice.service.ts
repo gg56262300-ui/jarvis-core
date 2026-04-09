@@ -331,6 +331,51 @@ export class VoiceService {
       };
     }
 
+    if (
+      normalized === 'mis on minu järgmine kalendrisündmus' ||
+      normalized === 'mis on järgmine kalendrisündmus' ||
+      normalized === 'mis on mu järgmine kalendrisündmus'
+    ) {
+      const calendarResult = await this.calendarService.listUpcomingEvents(1);
+
+      if (calendarResult.status !== 'ready') {
+        return {
+          transcript,
+          responseText: calendarResult.responseText,
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      if (calendarResult.events.length === 0) {
+        return {
+          transcript,
+          responseText: 'Sul ei ole ühtegi tulevast kalendrisündmust.',
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      const nextEvent = calendarResult.events[0];
+      const responseText = `Sinu järgmine kalendrisündmus on: ${nextEvent.startText} ${nextEvent.summary}.`;
+      const speechText = responseText.replace(/:/g, ' ');
+
+      return {
+        transcript,
+        responseText,
+        displayText: responseText,
+        speechText,
+        locale: 'et-EE',
+        inputMode: input.source,
+        outputMode: 'text',
+        status: 'speaking',
+      };
+    }
+
     if (normalized === 'näita kalendrit' || normalized === 'näita järgmisi kalendrisündmusi') {
       const calendarResult = await this.calendarService.listUpcomingEvents(10);
 
@@ -766,6 +811,50 @@ export class VoiceService {
       }
     }
 
+    if (
+      normalized.includes('järgmine kalendrisündmus') ||
+      normalized.includes('järgmine sündmus kalendris')
+    ) {
+      const calendarResult = await this.calendarService.listUpcomingEvents(1);
+
+      if (calendarResult.status !== 'ready') {
+        return {
+          transcript,
+          responseText: calendarResult.responseText,
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      if (calendarResult.events.length === 0) {
+        return {
+          transcript,
+          responseText: 'Sul ei ole ühtegi tulevast kalendrisündmust.',
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      const nextEvent = calendarResult.events[0];
+      const responseText = `Sinu järgmine kalendrisündmus on: ${nextEvent.startText} ${nextEvent.summary}.`;
+      const speechText = responseText.replace(/:/g, ' ');
+
+      return {
+        transcript,
+        responseText,
+        displayText: responseText,
+        speechText,
+        locale: 'et-EE',
+        inputMode: input.source,
+        outputMode: 'text',
+        status: 'speaking',
+      };
+    }
+
     const startedAt = Date.now();
 
     const result = await this.voiceAssistantProvider.respond({
@@ -1130,7 +1219,17 @@ export class VoiceService {
       const match = normalizedTranscript.match(pattern);
 
       if (match) {
-        return match[1]
+        const expressionCandidate = match[1].trim();
+
+        const hasMathSignal =
+          /\b(pluss|miinus|korda|jagatud)\b/.test(expressionCandidate) ||
+          /[\d()+\-*/]/.test(expressionCandidate);
+
+        if (!hasMathSignal) {
+          continue;
+        }
+
+        return expressionCandidate
           .replace(/ pluss /g, ' + ')
           .replace(/ miinus /g, ' - ')
           .replace(/ korda /g, ' * ')

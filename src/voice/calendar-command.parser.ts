@@ -1,9 +1,18 @@
+import { z } from 'zod';
+
 interface ParsedCalendarCommand {
   title: string;
   start?: string;
   end?: string;
   parseFailed: boolean;
 }
+
+const CalendarCreateMatchSchema = z.object({
+  rawTimeOfDay: z.string().optional(),
+  rawStartHour: z.string().min(1),
+  rawEndHour: z.string().min(1),
+  title: z.string().min(1),
+});
 
 type EstonianTimeOfDay = 'hommikul' | 'paeval' | 'ohtul';
 
@@ -75,6 +84,22 @@ export const parseCalendarCreateCommand = (
     rawStartHour = match[3];
     rawEndHour = match[4];
   }
+
+  const parsedMatch = CalendarCreateMatchSchema.safeParse({
+    rawTimeOfDay,
+    rawStartHour,
+    rawEndHour,
+    title,
+  });
+
+  if (!parsedMatch.success) {
+    return {
+      title: cleaned,
+      parseFailed: true,
+    };
+  }
+
+  ({ rawTimeOfDay, rawStartHour, rawEndHour, title } = parsedMatch.data);
 
   const timeOfDay = parseTimeOfDayToken(rawTimeOfDay);
   const startHour = parseHourToken(rawStartHour, timeOfDay);
