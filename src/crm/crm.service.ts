@@ -87,15 +87,21 @@ export class CrmService {
 
     try {
       databaseProvider.prepare(`ALTER TABLE crm_leads ADD COLUMN project_code TEXT`).run();
-    } catch {}
+    } catch {
+      // Column may already exist from an earlier schema version.
+    }
 
     try {
       databaseProvider.prepare(`ALTER TABLE crm_leads ADD COLUMN city TEXT`).run();
-    } catch {}
+    } catch {
+      // Column may already exist from an earlier schema version.
+    }
 
     try {
       databaseProvider.prepare(`ALTER TABLE crm_leads ADD COLUMN service_type TEXT`).run();
-    } catch {}
+    } catch {
+      // Column may already exist from an earlier schema version.
+    }
 
 
     databaseProvider

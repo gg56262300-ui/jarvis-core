@@ -6,7 +6,6 @@ import type { Credentials } from 'google-auth-library';
 
 import { env } from '../../../config/index.js';
 
-const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 const TOKEN_PATH = path.join(process.cwd(), 'data/google-calendar-token.json');
 
 export type CalendarEventItem = {

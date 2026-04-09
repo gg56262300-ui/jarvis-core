@@ -57,8 +57,8 @@ async function restoreTerminalFiles(cwd: string) {
 
   const restoredAt = new Date().toISOString();
 
-  let state: unknown = null;
-  let lastCapture: unknown = null;
+  let state: unknown;
+  let lastCapture: unknown;
 
   try {
     state = JSON.parse(await fs.readFile(statePath, 'utf8'));
@@ -162,10 +162,12 @@ router.get('/logs/text', async (_req, res) => {
   const backendRaw = await readLastLines(backendPath, 15);
   const watcherRaw = await readLastLines(watcherPath, 12);
 
+  const ansiCsiPattern = new RegExp(String.raw`\\x1B\\[[0-?]*[ -/]*[@-~]`, 'g');
+
   const clean = (value: string) =>
     value
-      .replace(/\u001bc/g, '')
-      .replace(/\x1B\[[0-?]*[ -/]*[@-~]/g, '')
+      .replaceAll('\u001bc', '')
+      .replace(ansiCsiPattern, '')
       .split('\n')
       .filter((line) => line.trim() !== '')
       .join('\n')
@@ -245,8 +247,8 @@ router.get('/bridge/latest', async (req, res) => {
   const terminalJsonPath = path.join(cwd, 'logs', 'terminal-last.json');
   const pendingPath = path.join(cwd, 'logs', 'terminal-pending.json');
 
-  let latest: unknown = null;
-  let pending: unknown = null;
+  let latest: unknown;
+  let pending: Record<string, unknown> | null;
 
   try {
     latest = JSON.parse(await fs.readFile(terminalJsonPath, 'utf8'));
@@ -508,7 +510,7 @@ router.post('/terminal-confirm/:requestId', async (req, res) => {
   const pendingPath = path.join(cwd, 'logs', 'terminal-pending.json');
   const { execFile } = await import('node:child_process');
 
-  let pendingRaw = '';
+  let pendingRaw: string;
   try {
     pendingRaw = await fs.readFile(pendingPath, 'utf8');
   } catch {
@@ -519,7 +521,7 @@ router.post('/terminal-confirm/:requestId', async (req, res) => {
     return;
   }
 
-  let pending: any;
+  let pending: Record<string, unknown> | null;
   try {
     pending = JSON.parse(pendingRaw);
   } catch {
@@ -558,7 +560,7 @@ router.post('/terminal-confirm/:requestId', async (req, res) => {
     async (error, stdout, stderr) => {
       const terminalJsonPath = path.join(cwd, 'logs', 'terminal-last.json');
 
-      let lastCapture = null;
+      let lastCapture: unknown;
       try {
         const content = await fs.readFile(terminalJsonPath, 'utf8');
         lastCapture = JSON.parse(content);
@@ -653,7 +655,7 @@ router.post('/terminal-run/:id', async (req, res) => {
     async (error, stdout, stderr) => {
       const terminalJsonPath = path.join(cwd, 'logs', 'terminal-last.json');
 
-      let lastCapture = null;
+      let lastCapture: unknown;
 
       try {
         const content = await fs.readFile(terminalJsonPath, 'utf8');
@@ -811,7 +813,7 @@ router.post('/execution/step', async (req, res) => {
   const logsDir = path.join(cwd, 'logs');
   const statePath = path.join(logsDir, 'execution-state.json');
 
-  let current: any = null;
+  let current: Record<string, unknown> | null;
   try {
     current = JSON.parse(await fs.readFile(statePath, 'utf8'));
   } catch {
@@ -819,7 +821,7 @@ router.post('/execution/step', async (req, res) => {
     return;
   }
 
-  const stepIndex = Number(req.body?.stepIndex ?? current.stepIndex ?? 0);
+  const stepIndex = Number(req.body?.stepIndex ?? current?.stepIndex ?? 0);
   const stepLabel = String(req.body?.stepLabel ?? '').trim();
   const stepStatus = String(req.body?.stepStatus ?? 'completed').trim() || 'completed';
 
@@ -840,7 +842,7 @@ router.post('/execution/complete', async (req, res) => {
   const logsDir = path.join(cwd, 'logs');
   const statePath = path.join(logsDir, 'execution-state.json');
 
-  let current: any = null;
+  let current: Record<string, unknown> | null;
   try {
     current = JSON.parse(await fs.readFile(statePath, 'utf8'));
   } catch {
@@ -948,8 +950,8 @@ router.get('/control-summary', async (_req, res) => {
   const currentLast = await readJsonFileSafe(path.join(logsDir, 'terminal-last.json'));
   const prevLast = await readJsonFileSafe(path.join(logsDir, 'terminal-prev.json'));
 
-  let executionCurrent: unknown = null;
-  let executionPrev: unknown = null;
+  let executionCurrent: Record<string, unknown> | null;
+  let executionPrev: unknown;
 
   try {
     executionCurrent = JSON.parse(await fs.readFile(executionStatePath, 'utf8'));
@@ -992,7 +994,7 @@ router.get('/control-summary-compact', async (_req, res) => {
   const pending = await readJsonFileSafe(path.join(logsDir, 'terminal-pending.json'));
   const currentLast = await readJsonFileSafe(path.join(logsDir, 'terminal-last.json'));
 
-  let executionCurrent: any = null;
+  let executionCurrent: Record<string, unknown> | null;
   try {
     executionCurrent = JSON.parse(await fs.readFile(path.join(logsDir, 'execution-state.json'), 'utf8'));
   } catch {
@@ -1061,6 +1063,8 @@ router.get('/control-summary-compact', async (_req, res) => {
 
 export const registerDebugRoutes = (app: Express) => {
   app.get('/debug/sentry-test', (_request, _response) => {
+    void _request;
+    void _response;
     throw new Error('Sentry test error from Jarvis');
   });
   app.use('/api/debug', router);

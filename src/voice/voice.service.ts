@@ -803,7 +803,7 @@ export class VoiceService {
     const cleanedItems = items.map((item) =>
       item
         .replace(/[€$£¥]/g, '')
-        .replace(/[⏳⌛📩📧📨]/g, '')
+        .replace(/[⏳⌛📩📧📨]/gu, '')
         .replace(/EADDRINUSE/gi, 'port on juba kasutuses')
         .replace(/address already in use/gi, 'aadress on juba kasutuses')
         .replace(/NODE-EXPRESS-?\d*/gi, 'Node Express')
@@ -835,7 +835,7 @@ export class VoiceService {
     const cleanedItems = items.map((item) =>
       item
         .replace(/[€$£¥]/g, '')
-        .replace(/[⏳⌛📩📧📨]/g, '')
+        .replace(/[⏳⌛📩📧📨]/gu, '')
         .replace(/EADDRINUSE/gi, 'port on juba kasutuses')
         .replace(/address already in use/gi, 'aadress on juba kasutuses')
         .replace(/NODE-EXPRESS-?\d*/gi, 'Node Express')
