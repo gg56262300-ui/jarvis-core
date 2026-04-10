@@ -235,6 +235,29 @@ router.get('/calendar-last-action/exists', async (_req, res) => {
   });
 });
 
+router.get('/calendar-last-action', async (_req, res) => {
+  const journalPath = path.resolve(process.cwd(), 'data/calendar-last-action.json');
+
+  try {
+    const raw = await fs.readFile(journalPath, 'utf8');
+    const data = JSON.parse(raw) as unknown;
+
+    res.json({
+      ok: true,
+      path: journalPath,
+      exists: true,
+      data,
+    });
+  } catch {
+    res.json({
+      ok: true,
+      path: journalPath,
+      exists: false,
+      data: null,
+    });
+  }
+});
+
 router.get('/bridge/latest', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
