@@ -1,10 +1,22 @@
 import { Router, type Express, type NextFunction, type Request, type Response } from 'express';
+import rateLimit from 'express-rate-limit';
 
 import { GmailService } from './gmail.service.js';
 
 export const registerGmailModule = (app: Express) => {
   const router = Router();
   const gmailService = new GmailService();
+
+  const authRateLimit = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      ok: false,
+      error: 'AUTH_RATE_LIMITED',
+    },
+  });
 
   router.get('/', (_request, response) => {
     response.json({
@@ -21,7 +33,7 @@ export const registerGmailModule = (app: Express) => {
     }
   });
 
-  router.post('/google/authorize', async (request: Request, response: Response, next: NextFunction) => {
+  router.post('/google/authorize', authRateLimit, async (request: Request, response: Response, next: NextFunction) => {
     try {
       const code = typeof request.body?.code === 'string' ? request.body.code.trim() : '';
 

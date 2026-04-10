@@ -1,4 +1,5 @@
 import { Router, type Express } from 'express';
+import rateLimit from 'express-rate-limit';
 
 import { ContactsService } from './contacts.service.js';
 
@@ -6,6 +7,17 @@ const contactsService = new ContactsService();
 
 export const registerContactsModule = (app: Express) => {
   const router = Router();
+
+  const authRateLimit = rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      ok: false,
+      error: 'AUTH_RATE_LIMITED',
+    },
+  });
 
   router.get('/google/auth-url', async (_req, res, next) => {
     try {
@@ -16,7 +28,7 @@ export const registerContactsModule = (app: Express) => {
     }
   });
 
-  router.post('/google/authorize', async (req, res, next) => {
+  router.post('/google/authorize', authRateLimit, async (req, res, next) => {
     try {
       const code = String(req.body?.code ?? '').trim();
       const result = await contactsService.completeAuthorization(code);
