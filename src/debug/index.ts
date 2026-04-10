@@ -218,6 +218,23 @@ router.get('/terminal-last/json', async (_req, res) => {
   }
 });
 
+router.get('/calendar-last-action/exists', async (_req, res) => {
+  const journalPath = path.resolve(process.cwd(), 'data/calendar-last-action.json');
+
+  let exists = true;
+  try {
+    await fs.access(journalPath);
+  } catch {
+    exists = false;
+  }
+
+  res.json({
+    ok: true,
+    path: journalPath,
+    exists,
+  });
+});
+
 router.get('/bridge/latest', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
