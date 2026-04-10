@@ -10,3 +10,4 @@ data/google-gmail-token.json
 data/google-calendar-token.json
 
 backups/
+data/calendar-last-action.json

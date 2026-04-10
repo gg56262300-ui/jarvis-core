@@ -50,6 +50,19 @@ type CreateContactInput = {
   email?: string | null;
 };
 
+type GooglePeopleConnection = {
+  names?: Array<{ displayName?: string | null }> | null;
+  phoneNumbers?: Array<{ value?: string | null }> | null;
+  emailAddresses?: Array<{ value?: string | null }> | null;
+};
+
+type GooglePeopleConnectionsListResponse = {
+  data: {
+    connections?: GooglePeopleConnection[] | null;
+    nextPageToken?: string | null;
+  };
+};
+
 type ContactPhoneLookupResult =
   | ContactsAuthorizationRequiredResult
   | {
@@ -126,17 +139,17 @@ export class ContactsService {
     let pageToken: string | undefined = undefined;
 
     do {
-      const response: any = await people.people.connections.list({
+      const response = (await people.people.connections.list({
         resourceName: 'people/me',
         pageSize: 1000,
         pageToken,
         personFields: 'names,emailAddresses,phoneNumbers',
-      });
+      })) as GooglePeopleConnectionsListResponse;
 
-      const connections = (response.data.connections ?? []) as any[];
+      const connections = response.data.connections ?? [];
 
       const batch: ContactListItem[] =
-        connections.map((person: any) => ({
+        connections.map((person) => ({
           name: person.names?.[0]?.displayName ?? '',
           phone: person.phoneNumbers?.[0]?.value ?? '',
           email: person.emailAddresses?.[0]?.value ?? '',
