@@ -35,5 +35,23 @@ export const registerContactsModule = (app: Express) => {
     }
   });
 
+  router.post('/create', async (req, res, next) => {
+    try {
+      const name = req.body?.name ? String(req.body.name).trim() : null;
+      const phone = req.body?.phone ? String(req.body.phone).trim() : null;
+      const email = req.body?.email ? String(req.body.email).trim() : null;
+
+      const result = await contactsService.createContact({
+        name,
+        phone,
+        email,
+      });
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.use('/api/contacts', router);
 };

@@ -7,7 +7,10 @@ import { google } from 'googleapis';
 import { env } from '../config/index.js';
 import { AppError } from '../shared/errors/app-error.js';
 
-const CONTACTS_SCOPE = 'https://www.googleapis.com/auth/contacts.readonly';
+const CONTACTS_SCOPES = [
+  'https://www.googleapis.com/auth/contacts.readonly',
+  'https://www.googleapis.com/auth/contacts',
+];
 
 type ContactsAuthorizationRequiredResult = {
   status: 'authorization_required';
@@ -16,15 +19,44 @@ type ContactsAuthorizationRequiredResult = {
   tokenPath: string;
 };
 
+type ContactListItem = {
+  name: string;
+  phone: string;
+  email: string;
+};
+
 type ContactsReadyResult = {
   status: 'ready';
   responseText: string;
-  contacts: Array<{
-    name: string;
-    phone: string;
-    email: string;
-  }>;
+  contacts: ContactListItem[];
 };
+
+type ContactCreateResult =
+  | ContactsAuthorizationRequiredResult
+  | {
+      status: 'ready';
+      responseText: string;
+      contact: {
+        resourceName: string;
+        name: string;
+        phone: string;
+        email: string;
+      };
+    };
+
+type CreateContactInput = {
+  name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+};
+
+type ContactPhoneLookupResult =
+  | ContactsAuthorizationRequiredResult
+  | {
+      status: 'ready';
+      responseText: string;
+      match: ContactListItem | null;
+    };
 
 export class ContactsService {
   private readonly tokenPath = path.resolve(process.cwd(), 'data/google-contacts-token.json');
@@ -36,7 +68,7 @@ export class ContactsService {
       authUrl: client.generateAuthUrl({
         access_type: 'offline',
         prompt: 'consent',
-        scope: [CONTACTS_SCOPE],
+        scope: CONTACTS_SCOPES,
       }),
       tokenPath: this.tokenPath,
       instructions:
@@ -77,7 +109,7 @@ export class ContactsService {
         authUrl: client.generateAuthUrl({
           access_type: 'offline',
           prompt: 'consent',
-          scope: [CONTACTS_SCOPE],
+          scope: CONTACTS_SCOPES,
         }),
         tokenPath: this.tokenPath,
       };
@@ -90,22 +122,43 @@ export class ContactsService {
       auth: client,
     });
 
-    const response = await people.people.connections.list({
-      resourceName: 'people/me',
-      pageSize: limit,
-      personFields: 'names,emailAddresses,phoneNumbers',
-    });
+    const contacts: ContactListItem[] = [];
+    let pageToken: string | undefined = undefined;
 
-    const contacts =
-      response.data.connections?.map((person) => ({
-        name: person.names?.[0]?.displayName ?? '',
-        phone: person.phoneNumbers?.[0]?.value ?? '',
-        email: person.emailAddresses?.[0]?.value ?? '',
-      })) ?? [];
+    do {
+      const response: any = await people.people.connections.list({
+        resourceName: 'people/me',
+        pageSize: 1000,
+        pageToken,
+        personFields: 'names,emailAddresses,phoneNumbers',
+      });
 
-    const shortList = contacts
-      .filter((item) => item.name || item.phone || item.email)
-      .slice(0, limit);
+      const connections = (response.data.connections ?? []) as any[];
+
+      const batch: ContactListItem[] =
+        connections.map((person: any) => ({
+          name: person.names?.[0]?.displayName ?? '',
+          phone: person.phoneNumbers?.[0]?.value ?? '',
+          email: person.emailAddresses?.[0]?.value ?? '',
+        })) ?? [];
+
+      for (const item of batch) {
+        if (item.name || item.phone || item.email) {
+          contacts.push(item);
+          if (contacts.length >= limit) {
+            break;
+          }
+        }
+      }
+
+      if (contacts.length >= limit) {
+        break;
+      }
+
+      pageToken = response.data.nextPageToken ?? undefined;
+    } while (pageToken);
+
+    const shortList = contacts.slice(0, limit);
 
     const summary =
       shortList.length === 0
@@ -124,7 +177,6 @@ export class ContactsService {
       contacts: shortList,
     };
   }
-
 
   async searchContacts(query: string, limit = 10): Promise<ContactsAuthorizationRequiredResult | ContactsReadyResult> {
     const trimmedQuery = query.trim();
@@ -145,14 +197,16 @@ export class ContactsService {
 
     const normalizedQuery = trimmedQuery.toLowerCase();
 
-    const matches = listed.contacts.filter((contact) => {
-      const haystack = [contact.name, contact.phone, contact.email]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
+    const matches = listed.contacts
+      .filter((contact) => {
+        const haystack = [contact.name, contact.phone, contact.email]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
 
-      return haystack.includes(normalizedQuery);
-    }).slice(0, limit);
+        return haystack.includes(normalizedQuery);
+      })
+      .slice(0, limit);
 
     const responseText =
       matches.length === 0
@@ -170,6 +224,95 @@ export class ContactsService {
       responseText,
       contacts: matches,
     };
+  }
+
+  async findContactByPhone(phone: string): Promise<ContactPhoneLookupResult> {
+    const normalizedTarget = this.normalizePhone(phone);
+
+    if (!normalizedTarget) {
+      return {
+        status: 'ready',
+        responseText: 'Telefoninumber puudub või on vigane.',
+        match: null,
+      };
+    }
+
+    const listed = await this.listContacts(10000);
+
+    if (listed.status !== 'ready') {
+      return listed;
+    }
+
+    const match =
+      listed.contacts.find((contact) => this.normalizePhone(contact.phone) == normalizedTarget) ?? null;
+
+    return {
+      status: 'ready',
+      responseText: match
+        ? `Telefoniga kontakt on olemas: ${phone}.`
+        : `Telefoniga kontakti ei leitud: ${phone}.`,
+      match,
+    };
+  }
+
+  async createContact(input: CreateContactInput): Promise<ContactCreateResult> {
+    const client = this.createOAuthClient();
+    const token = await this.readToken();
+
+    if (!token) {
+      return {
+        status: 'authorization_required',
+        responseText: 'Google Contacts ei ole veel autoriseeritud kirjutamiseks.',
+        authUrl: client.generateAuthUrl({
+          access_type: 'offline',
+          prompt: 'consent',
+          scope: CONTACTS_SCOPES,
+        }),
+        tokenPath: this.tokenPath,
+      };
+    }
+
+    const name = (input.name ?? '').trim();
+    const phone = (input.phone ?? '').trim();
+    const email = (input.email ?? '').trim();
+
+    if (!name && !phone && !email) {
+      throw new AppError(
+        'Kontakti loomiseks on vaja vähemalt nime, telefoni või e-posti.',
+        400,
+        'CONTACT_CREATE_INPUT_REQUIRED',
+      );
+    }
+
+    client.setCredentials(token);
+
+    const people = google.people({
+      version: 'v1',
+      auth: client,
+    });
+
+    const created = await people.people.createContact({
+      requestBody: {
+        names: name ? [{ givenName: name, displayName: name }] : undefined,
+        phoneNumbers: phone ? [{ value: phone }] : undefined,
+        emailAddresses: email ? [{ value: email }] : undefined,
+      },
+    });
+
+    return {
+      status: 'ready',
+      responseText: `Google Contact loodud: ${name || phone || email}.`,
+      contact: {
+        resourceName: created.data.resourceName ?? '',
+        name,
+        phone,
+        email,
+      },
+    };
+  }
+
+  private normalizePhone(value: string | null | undefined): string {
+    return (value ?? '').replace(/\D+/g, '');
   }
 
   private createOAuthClient() {

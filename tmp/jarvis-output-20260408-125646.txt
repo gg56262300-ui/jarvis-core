@@ -1,7 +1,0 @@
-===== TERMINAL CAPTURE =====
-time: 2026-04-08 12:56:46
-pwd: /Users/kait/jarvis-core
-cmd: curl -s http://localhost:3000/api/debug/execution-state-compact
------ OUTPUT START -----
-{"ok":true,"summary":{"currentExecutionId":"318ae2f7-1929-482e-935c-b2d80c885e73","currentLabel":"jarvis-multistep-test","currentStatus":"completed","currentStepIndex":3,"currentTotalSteps":3,"currentStepLabel":"execution finished","currentStepStatus":"completed","prevExecutionId":"318ae2f7-1929-482e-935c-b2d80c885e73","prevLabel":"jarvis-multistep-test","prevStatus":"running","prevStepIndex":2,"prevTotalSteps":3,"prevStepLabel":"guardrails checked","prevStepStatus":"completed"}}----- OUTPUT END -----
-exit_code: 0

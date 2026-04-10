@@ -15,6 +15,7 @@ import {
   listUpcomingEvents as listGoogleUpcomingEvents,
   updateUpcomingEventByTitle as updateGoogleUpcomingEventByTitle,
 } from '../modules/calendar/services/googleCalendar.service.js';
+import { writeLastCalendarAction } from './calendarActionJournal.js';
 
 export interface CalendarAuthorizationRequiredResult {
   status: 'authorization_required';
@@ -140,6 +141,17 @@ export class CalendarService {
     try {
       const event = await createGoogleCalendarEvent(input);
 
+      await writeLastCalendarAction({
+        type: 'create',
+        at: new Date().toISOString(),
+        event: {
+          id: event.id,
+          summary: event.summary ?? input.title,
+          start: event.start,
+          end: event.end,
+        },
+      });
+
       return {
         status: 'created',
         responseText: `Kalendrisse lisatud: ${event.summary}. Algus ${this.formatEventStart(event.start)}.`,
@@ -165,6 +177,11 @@ export class CalendarService {
     end: string;
   }): Promise<CalendarUpdateResult> {
     try {
+      const beforeEvents = await listGoogleUpcomingEvents(50);
+      const beforeMatch = beforeEvents.find((item) =>
+        (item.summary ?? '').trim().toLowerCase().includes(input.titleQuery.trim().toLowerCase()),
+      );
+
       const event = await updateGoogleUpcomingEventByTitle(input);
 
       if (!event) {
@@ -173,6 +190,23 @@ export class CalendarService {
           responseText: `Kalendrist ei leitud tulevast sündmust pealkirjaga: ${input.titleQuery}.`,
         };
       }
+
+      await writeLastCalendarAction({
+        type: 'update',
+        at: new Date().toISOString(),
+        before: {
+          id: beforeMatch?.id ?? event.id,
+          summary: beforeMatch?.summary ?? event.summary,
+          start: beforeMatch?.start ?? event.start,
+          end: beforeMatch?.end ?? event.end,
+        },
+        after: {
+          id: event.id,
+          summary: event.summary,
+          start: event.start,
+          end: event.end,
+        },
+      });
 
       return {
         status: 'updated',
@@ -202,6 +236,17 @@ export class CalendarService {
           responseText: `Kalendrist ei leitud tulevast sündmust pealkirjaga: ${titleQuery}.`,
         };
       }
+
+      await writeLastCalendarAction({
+        type: 'delete',
+        at: new Date().toISOString(),
+        event: {
+          id: event.id,
+          summary: event.summary,
+          start: event.start,
+          end: event.end,
+        },
+      });
 
       return {
         status: 'deleted',

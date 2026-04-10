@@ -1,6 +1,0 @@
-export type WhatsappInboundMessage = {
-  phone: string;
-  name: string | null;
-  message: string | null;
-  channel: 'whatsapp';
-};

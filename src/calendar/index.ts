@@ -34,7 +34,7 @@ export const registerCalendarModule = (app: Express) => {
 
   router.get('/upcoming', async (_req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await calendarService.listUpcomingEvents(10);
+      const result = await calendarService.listUpcomingEvents(30);
       res.json(result);
     } catch (error) {
       next(error);

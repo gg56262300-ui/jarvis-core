@@ -1,8 +1,0 @@
-import type { Express } from 'express';
-
-import { createModuleRouter } from '../shared/http/create-module-router.js';
-
-export const registerGmailModule = (app: Express) => {
-  app.use('/api/gmail', createModuleRouter('gmail'));
-};
-

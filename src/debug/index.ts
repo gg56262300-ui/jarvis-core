@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { undoLastCalendarAction } from '../calendar/calendarUndo.service.js';
 import { randomUUID } from 'node:crypto';
 import { Router, type Express } from 'express';
 
@@ -270,6 +271,104 @@ router.get('/bridge/latest', async (req, res) => {
   });
 });
 
+
+router.post('/bridge/calendar-undo-last', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+
+  const expectedToken = process.env.JARVIS_BRIDGE_TOKEN?.trim();
+  const providedToken =
+    String(req.headers['x-jarvis-bridge-token'] ?? '').trim() ||
+    String(req.query.token ?? '').trim();
+
+  if (!expectedToken) {
+    res.status(503).json({
+      ok: false,
+      error: 'BRIDGE_TOKEN_NOT_CONFIGURED',
+    });
+    return;
+  }
+
+  if (!providedToken || providedToken !== expectedToken) {
+    res.status(401).json({
+      ok: false,
+      error: 'BRIDGE_UNAUTHORIZED',
+    });
+    return;
+  }
+
+  const result = await undoLastCalendarAction();
+
+  res.status(200).json({
+    ok: result.status === 'undone',
+    bridge: 'jarvis-calendar-undo-last',
+    data: result,
+  });
+});
+
+
+router.post('/bridge/calendar-write', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.set('Surrogate-Control', 'no-store');
+
+  const expectedToken = process.env.JARVIS_BRIDGE_TOKEN?.trim();
+  const providedToken =
+    String(req.headers['x-jarvis-bridge-token'] ?? '').trim() ||
+    String(req.query.token ?? '').trim();
+
+  if (!expectedToken) {
+    res.status(503).json({
+      ok: false,
+      error: 'BRIDGE_TOKEN_NOT_CONFIGURED',
+    });
+    return;
+  }
+
+  if (!providedToken || providedToken !== expectedToken) {
+    res.status(401).json({
+      ok: false,
+      error: 'BRIDGE_UNAUTHORIZED',
+    });
+    return;
+  }
+
+  const text = String(req.body?.text ?? '').trim();
+
+  if (!text) {
+    res.status(400).json({
+      ok: false,
+      error: 'BRIDGE_TEXT_REQUIRED',
+    });
+    return;
+  }
+
+  const upstream = await fetch('http://localhost:3000/api/voice/turns', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      locale: 'et-EE',
+      inputMode: 'text',
+      outputMode: 'text',
+    }),
+  });
+
+  const data = await upstream.json().catch(() => ({
+    ok: false,
+    error: 'BRIDGE_UPSTREAM_INVALID_JSON',
+  }));
+
+  res.status(upstream.status).json({
+    ok: upstream.ok,
+    bridge: 'jarvis-calendar-write',
+    data,
+  });
+});
+
 const allowedCommands = {
   pwd: {
     label: 'Näita aktiivne kaust',
@@ -374,6 +473,14 @@ const allowedCommands = {
     risk: 'low',
     area: 'rollback',
     requiresConfirmation: false,
+  },
+  calendar_write_test: {
+    label: 'Lisa test-sündmus kalendrisse läbi Jarvise local voice flow',
+    command: 'curl -s -X POST http://localhost:3000/api/voice/turns -H "Content-Type: application/json" -d \'{"text":"lisa kalendrisse homme kell 16 kuni 17 BRIDGE CAL TEST","locale":"et-EE","inputMode":"text","outputMode":"text"}\'',
+    mode: 'write',
+    risk: 'medium',
+    area: 'calendar',
+    requiresConfirmation: true,
   },
   terminal_restore_prev_confirm: {
     label: 'Taasta terminali eelmine seis',

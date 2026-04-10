@@ -53,6 +53,82 @@ export const parseCalendarCreateCommand = (
 
   const startsWithTomorrow = /^homme\b/i.test(cleaned);
 
+  const saturdaySingleTimeMatch = cleaned.match(
+    /^laupäeval\s+(\d{1,2})\.?\s*(?:kuupäeval)?\s+kell\s+([^\s]+)(?:\s+(hommikul|päeval|paeval|õhtul|ohtul))?\s+(.+)$/i,
+  );
+
+  if (saturdaySingleTimeMatch) {
+    const day = Number(saturdaySingleTimeMatch[1]);
+    const rawHour = saturdaySingleTimeMatch[2];
+    const rawTimeOfDay = saturdaySingleTimeMatch[3];
+    const title = saturdaySingleTimeMatch[4].trim();
+
+    const timeOfDay = parseTimeOfDayToken(rawTimeOfDay);
+    const startHour = parseHourToken(rawHour, timeOfDay);
+
+    if (startHour === null) {
+      return {
+        title,
+        parseFailed: true,
+      };
+    }
+
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const startDate = new Date(now);
+    startDate.setFullYear(year, month, day);
+    startDate.setHours(startHour, 0, 0, 0);
+
+    const endDate = new Date(startDate);
+    endDate.setHours(startDate.getHours() + 1, 0, 0, 0);
+
+    return {
+      title,
+      start: formatIsoWithOffset(startDate),
+      end: formatIsoWithOffset(endDate),
+      parseFailed: false,
+    };
+  }
+
+  const tomorrowSingleTimeMatch = cleaned.match(
+    /^homme\s+kell\s+([^\s]+)(?:\s+(hommikul|päeval|paeval|õhtul|ohtul))?\s+(.+)$/i,
+  );
+
+  if (tomorrowSingleTimeMatch) {
+    const rawHour = tomorrowSingleTimeMatch[1];
+    const rawTimeOfDay = tomorrowSingleTimeMatch[2];
+    const title = tomorrowSingleTimeMatch[3].trim();
+
+    if (/^kuni\b/i.test(title)) {
+      // let the range parser below handle commands like:
+      // "homme kell 10 kuni 11 pealkiri"
+    } else {
+      const timeOfDay = parseTimeOfDayToken(rawTimeOfDay);
+      const startHour = parseHourToken(rawHour, timeOfDay);
+
+      if (startHour === null) {
+        return {
+          title,
+          parseFailed: true,
+        };
+      }
+
+      const startDate = new Date(now);
+      startDate.setDate(startDate.getDate() + 1);
+      startDate.setHours(startHour, 0, 0, 0);
+
+      const endDate = new Date(startDate);
+      endDate.setHours(startDate.getHours() + 1, 0, 0, 0);
+
+      return {
+        title,
+        start: formatIsoWithOffset(startDate),
+        end: formatIsoWithOffset(endDate),
+        parseFailed: false,
+      };
+    }
+  }
+
   const match = startsWithTomorrow
     ? cleaned.match(
         /^homme(?:\s+(hommikul|päeval|paeval|õhtul|ohtul))?\s+kell\s+([^\s]+)\s+kuni\s+([^\s]+)\s+(.+)$/i,

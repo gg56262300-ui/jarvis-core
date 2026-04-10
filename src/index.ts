@@ -1,4 +1,3 @@
-import './instrument.js';
 import { buildApp } from './app.js';
 import { env } from './config/index.js';
 import { logger } from './shared/logger/logger.js';

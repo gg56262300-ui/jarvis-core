@@ -29,7 +29,7 @@ export type UpdateCalendarEventInput = {
   end: string;
 };
 
-export async function listUpcomingEvents(maxResults = 10): Promise<CalendarEventItem[]> {
+export async function listUpcomingEvents(maxResults = 30): Promise<CalendarEventItem[]> {
   const auth = await createAuthorizedClient();
   const calendar = google.calendar({ version: 'v3', auth });
 
@@ -81,10 +81,11 @@ export async function listTodayEvents(maxResults = 50): Promise<CalendarEventIte
 }
 
 export async function createCalendarEvent(input: CreateCalendarEventInput) {
+
   const auth = await createAuthorizedClient();
   const calendar = google.calendar({ version: 'v3', auth });
 
-  const result = await calendar.events.insert({
+  const insertResult = await calendar.events.insert({
     calendarId: 'primary',
     requestBody: {
       summary: input.title,
@@ -99,14 +100,70 @@ export async function createCalendarEvent(input: CreateCalendarEventInput) {
     },
   });
 
-  const event = result.data;
+  const createdId = insertResult.data.id;
+
+  if (!createdId) {
+    throw new Error('Google Calendar insert returned no event id');
+  }
+
+  const verifyResult = await calendar.events.get({
+    calendarId: 'primary',
+    eventId: createdId,
+  });
+
+  const event = verifyResult.data;
+
+  if (!event.id) {
+    throw new Error('Google Calendar read-back verification failed');
+  }
 
   return {
-    id: event.id ?? '',
+    id: event.id,
     summary: event.summary ?? input.title,
     start: event.start?.dateTime || event.start?.date || input.start,
     end: event.end?.dateTime || event.end?.date || input.end,
     htmlLink: event.htmlLink ?? '',
+  };
+}
+
+export async function deleteCalendarEventById(eventId: string) {
+  const auth = await createAuthorizedClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  await calendar.events.delete({
+    calendarId: 'primary',
+    eventId,
+  });
+}
+
+export async function updateCalendarEventById(input: {
+  eventId: string;
+  start: string;
+  end: string;
+}) {
+  const auth = await createAuthorizedClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const result = await calendar.events.patch({
+    calendarId: 'primary',
+    eventId: input.eventId,
+    requestBody: {
+      start: {
+        dateTime: input.start,
+      },
+      end: {
+        dateTime: input.end,
+      },
+    },
+  });
+
+  const event = result.data;
+
+  return {
+    id: event.id ?? input.eventId,
+    summary: event.summary ?? '(no title)',
+    start: event.start?.dateTime || event.start?.date || input.start,
+    end: event.end?.dateTime || event.end?.date || input.end,
   };
 }
 

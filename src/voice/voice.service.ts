@@ -19,6 +19,31 @@ import type { VoiceAssistantProvider } from './voice-provider.js';
 import type { VoiceCapabilities, VoiceTurnInput, VoiceTurnResult } from './voice.types.js';
 
 export class VoiceService {
+  private isAmbiguousCalendarTitle(value: string): boolean {
+    const v = value.trim().toLowerCase();
+    if (v.length < 3) return true;
+
+    const blocked = new Set([
+      'see',
+      'seda',
+      'too',
+      'too seal',
+      'see asi',
+      'see sündmus',
+      'sundmus',
+      'see sundmus',
+      'viimane',
+      'eelmine',
+      'midagi',
+      'asi',
+      'sündmus',
+      'kalendrist',
+      'kalendris',
+    ]);
+
+    return blocked.has(v);
+  }
+
   private readonly calendarService = new CalendarService();
   private readonly calculatorService = new CalculatorService();
   private readonly contactsService = new ContactsService();
@@ -64,8 +89,30 @@ export class VoiceService {
     const contactSearchQuery = this.parseContactSearchQuery(transcript);
     const calculatorExpression = this.parseCalculatorExpression(transcript);
     const weatherPlaceQuery = this.parseWeatherPlaceQuery(transcript);
-    const calendarCreateCommand = normalized.startsWith('lisa kalendrisse')
-      ? parseCalendarCreateCommand(transcript)
+    const calendarCreateTranscript = (() => {
+      const reverseMatch = transcript.match(/^(.*?)\s*,?\s*(?:pane|kirjuta|märgi|lisa)\s+(?:see\s+)?kalendrisse\s+(.+)$/i);
+
+      if (reverseMatch?.[1]?.trim() && reverseMatch?.[2]?.trim()) {
+        return `lisa kalendrisse ${reverseMatch[1].trim()} ${reverseMatch[2].trim()}`;
+      }
+
+      const directMatch = transcript.match(/(?:lisa|pane|kirjuta|märgi)\s+kalendrisse\b\s*(.+)$/i);
+
+      if (directMatch?.[1]?.trim()) {
+        return `lisa kalendrisse ${directMatch[1].trim()}`;
+      }
+
+      const reverseTailMatch = transcript.match(/^(.*?)\s*,?\s*(?:pane|kirjuta|märgi|lisa)\s+(?:see\s+)?kalendrisse\s*$/i);
+
+      if (reverseTailMatch?.[1]?.trim()) {
+        return `lisa kalendrisse ${reverseTailMatch[1].trim()}`;
+      }
+
+      return null;
+    })();
+
+    const calendarCreateCommand = calendarCreateTranscript
+      ? parseCalendarCreateCommand(calendarCreateTranscript)
       : null;
     const calendarDeleteTitle = normalized.startsWith('kustuta kalendrist')
       ? transcript.replace(/^kustuta kalendrist[:\s-]*/i, '').trim()
@@ -446,6 +493,18 @@ export class VoiceService {
         };
       }
 
+      if (this.isAmbiguousCalendarTitle(calendarUpdateCommand.title)) {
+        return {
+          transcript,
+          responseText:
+            'Kalendrimuudatus jäi tegemata, sest sündmuse nimi oli liiga ebamäärane. Ütle konkreetne pealkiri.',
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
       const updateResult = await this.calendarService.updateUpcomingEventByTitle({
         titleQuery: calendarUpdateCommand.title,
         start: calendarUpdateCommand.start,
@@ -467,6 +526,18 @@ export class VoiceService {
         return {
           transcript,
           responseText: 'Palun ütle kustutatava kalendrisündmuse nimi pärast sõnu kustuta kalendrist.',
+          locale: 'et-EE',
+          inputMode: input.source,
+          outputMode: 'text',
+          status: 'speaking',
+        };
+      }
+
+      if (this.isAmbiguousCalendarTitle(calendarDeleteTitle)) {
+        return {
+          transcript,
+          responseText:
+            'Kalendrikustutus jäi tegemata, sest sündmuse nimi oli liiga ebamäärane. Ütle konkreetne pealkiri.',
           locale: 'et-EE',
           inputMode: input.source,
           outputMode: 'text',

@@ -1,6 +1,0 @@
-import * as Sentry from '@sentry/node';
-
-Sentry.init({
-  dsn: process.env.SENTRY_DSN || 'https://363cdd91313f39106f513bcfc7c66d96@o4511167062409216.ingest.de.sentry.io/4511167086985296',
-  sendDefaultPii: true,
-});

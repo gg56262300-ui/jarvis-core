@@ -1,7 +1,0 @@
-===== TERMINAL CAPTURE =====
-time: 2026-04-08 13:02:15
-pwd: /Users/kait/jarvis-core
-cmd: curl -s http://localhost:3000/api/debug/execution-state-compact
------ OUTPUT START -----
-{"ok":true,"summary":{"currentExecutionId":"2fce50b9-cf48-4538-9752-5e9086bea0ab","currentLabel":"controlled-health-flow","currentStatus":"completed","currentStepIndex":3,"currentTotalSteps":3,"currentStepLabel":"controlled flow complete","currentStepStatus":"completed","prevExecutionId":"2fce50b9-cf48-4538-9752-5e9086bea0ab","prevLabel":"controlled-health-flow","prevStatus":"running","prevStepIndex":2,"prevTotalSteps":3,"prevStepLabel":"control summary checked","prevStepStatus":"completed"}}----- OUTPUT END -----
-exit_code: 0

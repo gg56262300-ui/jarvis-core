@@ -1,5 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
 
 echo "===== PRE-PUSH: FULL GATE =====" &&
 npm run gate:full

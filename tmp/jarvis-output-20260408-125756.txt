@@ -1,7 +1,0 @@
-===== TERMINAL CAPTURE =====
-time: 2026-04-08 12:57:56
-pwd: /Users/kait/jarvis-core
-cmd: curl -s http://localhost:3000/api/debug/execution-state-compact
------ OUTPUT START -----
-{"ok":true,"summary":{"currentExecutionId":"797bed56-eb7e-4476-913b-f72c4b74a57a","currentLabel":"jarvis-safe-flow","currentStatus":"completed","currentStepIndex":3,"currentTotalSteps":3,"currentStepLabel":"flow complete","currentStepStatus":"completed","prevExecutionId":"797bed56-eb7e-4476-913b-f72c4b74a57a","prevLabel":"jarvis-safe-flow","prevStatus":"running","prevStepIndex":2,"prevTotalSteps":3,"prevStepLabel":"step 2","prevStepStatus":"completed"}}----- OUTPUT END -----
-exit_code: 0

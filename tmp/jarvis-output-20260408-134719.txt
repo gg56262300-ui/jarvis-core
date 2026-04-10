@@ -1,7 +1,0 @@
-===== TERMINAL CAPTURE =====
-time: 2026-04-08 13:47:19
-pwd: /Users/kait/jarvis-core
-cmd: curl -s http://localhost:3000/api/debug/control-summary-compact
------ OUTPUT START -----
-{"ok":true,"summary":{"cwd":"/Users/kait/jarvis-core","terminalStage":"direct_run","terminalStatus":"completed","terminalUpdatedAt":"2026-04-08 13:17:11","terminalCommand":"curl -s http://localhost:3000/api/debug/control-summary-compact","executionStatus":"running","executionStep":2,"executionTotalSteps":5,"pendingId":null,"pendingRequestId":null,"pendingStatus":null,"currentPwd":"/Users/kait/jarvis-core","currentExitCode":0}}----- OUTPUT END -----
-exit_code: 0

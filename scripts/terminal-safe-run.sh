@@ -57,6 +57,9 @@ case "$ID" in
   execution_state_compact)
     CMD='curl -s http://localhost:3000/api/debug/execution-state-compact'
     ;;
+  calendar_write_test)
+    CMD="curl -s -X POST http://localhost:3000/api/voice/turns -H 'Content-Type: application/json' --data-raw '{\"text\":\"lisa kalendrisse homme kell 16 kuni 17 BRIDGE CAL TEST\",\"locale\":\"et-EE\",\"inputMode\":\"text\",\"outputMode\":\"text\"}'"
+    ;;
   *)
     echo "SAFE_RUN_NOT_ALLOWED: $ID"
     exit 3

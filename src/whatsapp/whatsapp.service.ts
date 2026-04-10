@@ -1,8 +1,48 @@
+import { ContactsService } from '../contacts/contacts.service.js';
 import { CrmService } from '../crm/crm.service.js';
 import type { WhatsappInboundMessage } from './whatsapp.types.js';
 
 export class WhatsappService {
   private readonly crmService = new CrmService();
+  private readonly contactsService = new ContactsService();
+
+  private readonly workflowOwner = 'whatsapp' as const;
+  private readonly storageOwner = 'crm' as const;
+  private readonly contactSyncOwner = 'contacts' as const;
+  private readonly pipelineStage = 'whatsapp_intake' as const;
+
+  private normalizeProjectCode(value: string | null | undefined): string | null {
+    const normalized = (value ?? '').trim().toLowerCase();
+    if (!normalized) return null;
+
+    const map: Record<string, string> = {
+      remont: 'remont',
+      hooldus: 'hooldus',
+      kinnisvara: 'kinnisvara',
+      jats: 'jats',
+      jäts: 'jats',
+      pir: 'pir',
+      osb: 'osb',
+      vineer: 'vineer',
+    };
+
+    return map[normalized] ?? null;
+  }
+
+  private normalizeCity(value: string | null | undefined): string | null {
+    const normalized = (value ?? '').trim().replace(/\s+/g, ' ');
+    if (!normalized) return null;
+
+    return normalized
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  private normalizeServiceType(value: string | null | undefined): string | null {
+    const normalized = (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+    return normalized || null;
+  }
 
   private isBusinessOpen(now = new Date()): boolean {
     if (process.env.WHATSAPP_FORCE_AFTER_HOURS === '1') return false;
@@ -55,7 +95,7 @@ export class WhatsappService {
     return 'Tere. Teie pöördumine on vastu võetud. Vastame tööajal esimesel võimalusel.';
   }
 
-  handleInboundMessage(input: WhatsappInboundMessage) {
+  async handleInboundMessage(input: WhatsappInboundMessage) {
     const normalizedPhone = input.phone.replace(/[^\d+]/g, '').trim();
 
     if (!normalizedPhone) {
@@ -65,15 +105,20 @@ export class WhatsappService {
       };
     }
 
+    const normalizedName = input.name?.trim() ? input.name.trim() : null;
+    const normalizedProjectCode = this.normalizeProjectCode(input.projectCode ?? null);
+    const normalizedCity = this.normalizeCity(input.city ?? null);
+    const normalizedServiceType = this.normalizeServiceType(input.serviceType ?? null);
+
     const leadResult = this.crmService.upsertLead({
       source: 'whatsapp',
       phone: normalizedPhone,
-      name: input.name,
+      name: normalizedName,
       tag: 'whatsapp-inbound',
       notes: input.message ?? null,
-      projectCode: input.projectCode ?? null,
-      city: input.city ?? null,
-      serviceType: input.serviceType ?? null,
+      projectCode: normalizedProjectCode,
+      city: normalizedCity,
+      serviceType: normalizedServiceType,
     });
 
     const lead = leadResult.lead;
@@ -113,8 +158,60 @@ export class WhatsappService {
       : null;
     const replyText = this.getReplyText({ afterHours, nextAction });
 
+    let contactSync = null;
+
+    if (lead.name && lead.phone) {
+      try {
+        const existingContacts = await this.contactsService.findContactByPhone(lead.phone);
+
+        if (existingContacts.status === 'ready') {
+          if (existingContacts.match) {
+            contactSync = {
+              status: 'skipped_existing',
+              responseText: `Google Contact juba olemas: ${lead.phone}.`,
+            };
+          } else {
+            const createdContact = await this.contactsService.createContact({
+              name: lead.name,
+              phone: lead.phone,
+              email: null,
+            });
+
+            contactSync = createdContact.status === 'ready'
+              ? {
+                  status: 'created',
+                  responseText: createdContact.responseText,
+                  contact: createdContact.contact,
+                }
+              : {
+                  status: 'authorization_required',
+                  responseText: createdContact.responseText,
+                  authUrl: createdContact.authUrl,
+                  tokenPath: createdContact.tokenPath,
+                };
+          }
+        } else {
+          contactSync = {
+            status: 'authorization_required',
+            responseText: existingContacts.responseText,
+            authUrl: existingContacts.authUrl,
+            tokenPath: existingContacts.tokenPath,
+          };
+        }
+      } catch (error) {
+        contactSync = {
+          status: 'error',
+          responseText: error instanceof Error ? error.message : 'Google Contact sync ebaõnnestus.',
+        };
+      }
+    }
+
     return {
       status: 'ready' as const,
+      workflowOwner: this.workflowOwner,
+      storageOwner: this.storageOwner,
+      contactSyncOwner: this.contactSyncOwner,
+      pipelineStage: this.pipelineStage,
       responseText: leadResult.isNewLead
         ? `WhatsApp uus lead salvestatud: ${lead.phone}.`
         : `WhatsApp olemasolev lead uuendatud: ${lead.phone}.`,
@@ -128,6 +225,7 @@ export class WhatsappService {
       replyText,
       lead,
       messageRecord,
+      contactSync,
     };
   }
 }

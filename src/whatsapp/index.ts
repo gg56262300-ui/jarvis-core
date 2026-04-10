@@ -1,4 +1,4 @@
-import { Router, type Express } from 'express';
+import { Router, type Express, type Request, type Response } from 'express';
 import { WhatsappService } from './whatsapp.service.js';
 
 const whatsappService = new WhatsappService();
@@ -6,7 +6,7 @@ const whatsappService = new WhatsappService();
 export const registerWhatsappModule = (app: Express) => {
   const router = Router();
 
-  router.post('/inbound', (req, res) => {
+  const handleInboundRoute = async (req: Request, res: Response) => {
     const phone = String(req.body?.phone ?? '').trim();
     const name = req.body?.name ? String(req.body.name).trim() : null;
     const message = req.body?.message ? String(req.body.message).trim() : null;
@@ -14,7 +14,7 @@ export const registerWhatsappModule = (app: Express) => {
     const city = req.body?.city ? String(req.body.city).trim() : null;
     const serviceType = req.body?.serviceType ? String(req.body.serviceType).trim() : null;
 
-    const result = whatsappService.handleInboundMessage({
+    const result = await whatsappService.handleInboundMessage({
       phone,
       name,
       message,
@@ -36,7 +36,10 @@ export const registerWhatsappModule = (app: Express) => {
     }
 
     res.json(result);
-  });
+  };
+
+  router.post('/', handleInboundRoute);
+  router.post('/inbound', handleInboundRoute);
 
   app.use('/api/whatsapp', router);
 };

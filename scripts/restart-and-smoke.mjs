@@ -17,6 +17,9 @@ function safeCurl(name, text) {
   run('echo');
 }
 
+run('echo "=================================================="');
+run('echo "===== SAADA MULLE ALATES SIIT ====="');
+run('echo "=================================================="');
 run('echo "===== PM2 RESTART ====="');
 run('pm2 restart jarvis');
 run('sleep 2');
