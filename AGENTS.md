@@ -49,6 +49,42 @@ Turn Jarvis into a semi-autonomous development system with:
 9. `npm run smoke` (after meaningful changes)
 10. `npm run backup` (before risky or structural changes)
 
+
+
+## Cursor Patch Discipline (Locked)
+1. Cursor may change only the explicitly allowed file list for the current task.
+2. Cursor must first answer with:
+   - PLAN
+   - FILES TO CHANGE
+   - PATCH PREVIEW
+3. Cursor must NOT apply any patch before approval.
+4. Cursor must NOT touch:
+   - src/voice/*
+   - parser files
+   - Gmail / Contacts / WhatsApp
+   - runtime / env
+   - tests
+   unless explicitly allowed for that task.
+5. After patch, required output is only:
+   - IMPLEMENTATION
+   - VALIDATION COMMANDS
+6. Every patch must be:
+   - minimal
+   - reversible
+   - single-purpose
+7. If active context contains unrelated files, Cursor must reset scope before patching.
+8. No refactor, no cleanup, no extra improvements unless explicitly requested.
+9. If task is read-only, Cursor must not modify any file.
+10. Preferred workflow:
+   - inspect
+   - plan
+   - approval
+   - patch
+   - build
+   - lint
+   - targeted check
+   - commit
+
 ## Current focus
 1. Stable runtime control
 2. Smoke-tested core routes
