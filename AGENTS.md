@@ -85,6 +85,34 @@ Turn Jarvis into a semi-autonomous development system with:
    - targeted check
    - commit
 
+
+
+## Pre-commit Gate Discipline (Locked)
+1. Every commit must pass:
+   - build
+   - lint
+   - voice gate
+   - calendar CRUD tests
+   - reminder routing tests
+   - reminder parser tests
+2. If any gate fails, commit must stop immediately.
+3. No bypass of pre-commit gate unless explicitly approved by owner.
+4. Fix only the failing issue first.
+5. Do not open side branches during gate failure.
+6. Gate failures must be treated as:
+   - stop
+   - isolate
+   - minimal fix
+   - rerun gate
+7. No unrelated cleanup during gate repair.
+8. If a patch causes new lint/type/test errors, repair that patch before any next task.
+9. Preferred gate order:
+   - build
+   - lint
+   - targeted tests
+   - commit
+10. Gate status is source of truth for “ready to commit”.
+
 ## Current focus
 1. Stable runtime control
 2. Smoke-tested core routes
