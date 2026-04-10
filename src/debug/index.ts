@@ -258,6 +258,53 @@ router.get('/calendar-last-action', async (_req, res) => {
   }
 });
 
+router.get('/calendar-last-action/summary', async (_req, res) => {
+  const journalPath = path.resolve(process.cwd(), 'data/calendar-last-action.json');
+
+  try {
+    const raw = await fs.readFile(journalPath, 'utf8');
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+    const parsedObj = parsed as Record<string, unknown>;
+    const type = String(parsedObj.type ?? '').trim() as 'create' | 'update' | 'delete';
+    const at = String(parsedObj.at ?? '').trim();
+    const afterObj =
+      parsedObj.after && typeof parsedObj.after === 'object'
+        ? (parsedObj.after as Record<string, unknown>)
+        : null;
+    const eventObj =
+      parsedObj.event && typeof parsedObj.event === 'object'
+        ? (parsedObj.event as Record<string, unknown>)
+        : null;
+    const title = String((type === 'update' ? afterObj?.summary : eventObj?.summary) ?? '').trim();
+
+    if ((type !== 'create' && type !== 'update' && type !== 'delete') || !at) {
+      res.json({
+        ok: true,
+        exists: false,
+        summary: null,
+      });
+      return;
+    }
+
+    res.json({
+      ok: true,
+      exists: true,
+      summary: {
+        type,
+        at,
+        title,
+      },
+    });
+  } catch {
+    res.json({
+      ok: true,
+      exists: false,
+      summary: null,
+    });
+  }
+});
+
 router.get('/bridge/latest', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.set('Pragma', 'no-cache');
