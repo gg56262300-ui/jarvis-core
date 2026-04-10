@@ -3,8 +3,22 @@ import path from 'node:path';
 import { undoLastCalendarAction } from '../calendar/calendarUndo.service.js';
 import { randomUUID } from 'node:crypto';
 import { Router, type Express } from 'express';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
+
+const debugRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    ok: false,
+    error: 'DEBUG_RATE_LIMITED',
+  },
+});
+
+router.use(debugRateLimit);
 
 async function writeTerminalState(cwd: string, state: unknown) {
   const logsDir = path.join(cwd, 'logs');
