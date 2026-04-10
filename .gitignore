@@ -11,3 +11,10 @@ data/google-calendar-token.json
 
 backups/
 data/calendar-last-action.json
+data/google-contacts-token.json
+data/*.sqlite-shm
+data/*.sqlite-wal
+playwright-tests/
+playwright.config.ts
+scripts/archive/
+scripts/trash/
