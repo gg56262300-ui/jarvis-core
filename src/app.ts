@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/node';
 import path from 'node:path';
 
 import { registerAiRoutingModule } from './ai-routing/index.js';
+import { registerBridgeModule } from './bridge/index.js';
 import { registerCalendarModule } from './calendar/index.js';
 import { registerCalculatorModule } from './calculator/index.js';
 import { registerContactsModule } from './contacts/index.js';
@@ -35,6 +36,7 @@ export const buildApp = () => {
 
   app.use('/health', createHealthRouter());
 
+  registerBridgeModule(app);
   registerContactsModule(app);
   registerGmailModule(app);
   registerCalendarModule(app);
