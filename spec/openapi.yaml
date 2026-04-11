@@ -1,0 +1,186 @@
+openapi: 3.0.3
+info:
+  title: Jarvis ChatGPT Bridge API
+  version: 0.1.0
+  description: >
+    Minimaalne mustand. Ainult allolevad teed on lubatud (deny-by-default).
+    Viited: docs/CHATGPT_JARVIS_BRIDGE.md, docs/CHATGPT_JARVIS_BRIDGE_COMMANDS.md,
+    docs/CHATGPT_JARVIS_BRIDGE_OPENAPI_PLAN.md
+
+servers:
+  - url: https://{bridge-host}
+    variables:
+      bridge-host:
+        default: jarvis-bridge.example.com
+        description: Bridge host (mitte localhost välisklientide jaoks)
+
+security:
+  - BearerAuth: []
+
+paths:
+  /bridge/v1/health:
+    get:
+      operationId: bridgeHealth
+      summary: Süsteemi elusolek
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeResponse'
+
+  /bridge/v1/calendar/today:
+    get:
+      operationId: calendarToday
+      summary: Tänased kalendrisündmused
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeResponse'
+
+  /bridge/v1/calendar/next:
+    get:
+      operationId: calendarNext
+      summary: Järgmine kalendrisündmus
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeResponse'
+
+  /bridge/v1/calendar/upcoming:
+    get:
+      operationId: calendarUpcoming
+      summary: Lähiaja kalendrisündmused
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 30
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeResponse'
+
+  /bridge/v1/calendar/events:
+    post:
+      operationId: calendarEventCreate
+      summary: Loo kalendrisündmus
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 8
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalendarEventCreateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeResponse'
+        '400':
+          description: Vigane päring
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Server-server access token (implementatsiooni detailid eraldi).
+
+  schemas:
+    BridgeError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    BridgeResponse:
+      type: object
+      required:
+        - ok
+        - command_id
+      properties:
+        ok:
+          type: boolean
+        command_id:
+          type: string
+          description: Käsu id (nt health, calendar.today).
+        data:
+          nullable: true
+          description: Jarvisi kanali vastuse struktuur (implementatsioon täpsustab).
+        error:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/BridgeError'
+        meta:
+          type: object
+          additionalProperties: true
+          description: Ilma PII ja secretideta.
+
+    CalendarEventCreateRequest:
+      type: object
+      required:
+        - title
+        - start
+        - end
+      properties:
+        title:
+          type: string
+        start:
+          type: string
+          description: Algus (ISO 8601 või kanali nõutud vorming).
+        end:
+          type: string
+          description: Lõpp (ISO 8601 või kanali nõutud vorming).
+        description:
+          type: string
+        location:
+          type: string
+        locale:
+          type: string
+          example: et-EE
+        client_request_id:
+          type: string
+          description: Korrelatsioon; ei asenda Idempotency-Key.
