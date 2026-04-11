@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { GaxiosError } from 'gaxios';
 import { google } from 'googleapis';
+import type { gmail_v1 } from 'googleapis';
 import type { Credentials } from 'google-auth-library';
 
 import { env } from '../config/index.js';
@@ -48,6 +49,28 @@ export type GmailReadResult =
   | GmailAuthorizationRequiredResult
   | GmailMessageReadReadyResult;
 
+export interface GmailMessageDetailReadyResult {
+  status: 'ready';
+  message: {
+    id: string;
+    from: string;
+    subject: string;
+    date: string;
+    snippet: string;
+    text?: string;
+  };
+}
+
+export type GmailMessageByIdResult = GmailAuthorizationRequiredResult | GmailMessageDetailReadyResult;
+
+export interface GmailSendTestReadyResult {
+  status: 'sent';
+  id: string;
+  responseText: string;
+}
+
+export type GmailSendTestResult = GmailAuthorizationRequiredResult | GmailSendTestReadyResult;
+
 type GmailMessageSummary = GmailMessagesReadyResult['messages'][number];
 type AuthorizedClientResult =
   | {
@@ -61,7 +84,10 @@ type AuthorizedClientResult =
 
 export class GmailService {
   private readonly tokenPath = path.resolve(process.cwd(), 'data/google-gmail-token.json');
-  private readonly scopes = ['https://www.googleapis.com/auth/gmail.readonly'];
+  private readonly scopes = [
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.send',
+  ];
   private recentMessagesCache: GmailMessageSummary[] = [];
   private searchResultsCache: GmailMessageSummary[] = [];
 
@@ -116,6 +142,125 @@ export class GmailService {
       responseText: 'Gmail on nüüd kohalikus arenduses autoriseeritud.',
       tokenPath: this.tokenPath,
     };
+  }
+
+  async getMessageById(messageId: string): Promise<GmailMessageByIdResult> {
+    const id = messageId.trim();
+    if (!id) {
+      throw new AppError('Sõnumi id puudub.', 400, 'GMAIL_MESSAGE_ID_REQUIRED');
+    }
+
+    const authorizedClient = await this.getAuthorizedClient();
+
+    if (authorizedClient.status === 'authorization_required') {
+      return authorizedClient.result;
+    }
+
+    try {
+      const gmailApi = google.gmail({
+        version: 'v1',
+        auth: authorizedClient.client,
+      });
+
+      const startedAt = Date.now();
+      const messageResponse = await gmailApi.users.messages.get({
+        userId: 'me',
+        id,
+        format: 'full',
+      });
+      logger.info(
+        {
+          provider: 'google',
+          operation: 'gmail.users.messages.get',
+          durationMs: Date.now() - startedAt,
+        },
+        'External API latency',
+      );
+
+      const headers = messageResponse.data.payload?.headers ?? [];
+      const getHeader = (name: string) =>
+        headers.find((header) => header.name?.toLowerCase() === name.toLowerCase())?.value?.trim() || '';
+
+      const text = extractPlainTextFromPayload(messageResponse.data.payload);
+
+      return {
+        status: 'ready',
+        message: {
+          id: messageResponse.data.id ?? id,
+          from: getHeader('From') || 'Saatja puudub',
+          subject: getHeader('Subject') || 'Teema puudub',
+          date: getHeader('Date') || 'Kuupäev puudub',
+          snippet: messageResponse.data.snippet?.trim() || '',
+          ...(text ? { text } : {}),
+        },
+      };
+    } catch (error) {
+      const gaxiosError = error as GaxiosError<{ error?: { code?: number; message?: string } }>;
+      if (gaxiosError.response?.status === 404) {
+        throw new AppError('Sõnumit ei leitud.', 404, 'GMAIL_MESSAGE_NOT_FOUND');
+      }
+      logger.warn({ err: error }, 'Gmail message by id request failed');
+      return this.buildAuthorizationRequiredResult(authorizedClient.client);
+    }
+  }
+
+  async sendTestMessage(to: string, subject: string, textBody: string): Promise<GmailSendTestResult> {
+    const toTrim = to.trim();
+    const subjectTrim = subject.trim();
+    const textTrim = textBody.trim();
+
+    if (!toTrim || !subjectTrim || !textTrim) {
+      throw new AppError('Palun saada to, subject ja text väljad.', 400, 'GMAIL_SEND_TEST_INVALID_BODY');
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(toTrim)) {
+      throw new AppError('Vigane e-posti aadress väljal to.', 400, 'GMAIL_SEND_TEST_INVALID_TO');
+    }
+
+    const authorizedClient = await this.getAuthorizedClient();
+
+    if (authorizedClient.status === 'authorization_required') {
+      return authorizedClient.result;
+    }
+
+    try {
+      const gmailApi = google.gmail({
+        version: 'v1',
+        auth: authorizedClient.client,
+      });
+
+      const raw = buildRfc822PlainText(toTrim, subjectTrim, textTrim);
+      const encoded = Buffer.from(raw, 'utf8')
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/u, '');
+
+      const startedAt = Date.now();
+      const sendResponse = await gmailApi.users.messages.send({
+        userId: 'me',
+        requestBody: { raw: encoded },
+      });
+      logger.info(
+        {
+          provider: 'google',
+          operation: 'gmail.users.messages.send',
+          durationMs: Date.now() - startedAt,
+        },
+        'External API latency',
+      );
+
+      const sentId = sendResponse.data.id ?? '';
+
+      return {
+        status: 'sent',
+        id: sentId,
+        responseText: sentId ? `Testkiri saadetud (id: ${sentId}).` : 'Testkiri saadetud.',
+      };
+    } catch (error) {
+      logger.warn({ err: error }, 'Gmail send test failed');
+      return this.buildAuthorizationRequiredResult(authorizedClient.client);
+    }
   }
 
   async listLatestMessages(limit = 10, summaryCount = Math.min(limit, 5)): Promise<GmailInboxResult> {
@@ -691,4 +836,45 @@ export class GmailService {
 
     return knownOrdinals[position] ?? `${position}.`;
   }
+}
+
+function decodeGmailBodyData(data: string): string {
+  const normalized = data.replace(/-/g, '+').replace(/_/g, '/');
+  return Buffer.from(normalized, 'base64').toString('utf8');
+}
+
+function extractPlainTextFromPayload(part: gmail_v1.Schema$MessagePart | undefined): string {
+  if (!part) {
+    return '';
+  }
+
+  const mime = part.mimeType ?? '';
+
+  if (mime === 'text/plain' && part.body?.data) {
+    return decodeGmailBodyData(part.body.data);
+  }
+
+  if (part.parts) {
+    for (const child of part.parts) {
+      const plain = extractPlainTextFromPayload(child);
+      if (plain) {
+        return plain;
+      }
+    }
+  }
+
+  return '';
+}
+
+function buildRfc822PlainText(to: string, subject: string, text: string): string {
+  const encodedSubject = `=?UTF-8?B?${Buffer.from(subject, 'utf8').toString('base64')}?=`;
+  return [
+    `To: ${to}`,
+    `Subject: ${encodedSubject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset=utf-8',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    text,
+  ].join('\r\n');
 }

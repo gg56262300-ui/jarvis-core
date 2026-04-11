@@ -61,5 +61,25 @@ export const registerGmailModule = (app: Express) => {
     }
   });
 
+  router.get('/message/:id', async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      response.json(await gmailService.getMessageById(String(request.params.id ?? '')));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/send-test', authRateLimit, async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const to = typeof request.body?.to === 'string' ? request.body.to : '';
+      const subject = typeof request.body?.subject === 'string' ? request.body.subject : '';
+      const text = typeof request.body?.text === 'string' ? request.body.text : '';
+
+      response.json(await gmailService.sendTestMessage(to, subject, text));
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.use('/api/gmail', router);
 };
