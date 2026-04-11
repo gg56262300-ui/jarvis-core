@@ -95,5 +95,51 @@ export const registerBridgeModule = (app: Express) => {
     }
   });
 
+  router.post('/v1/calendar/events', async (req, res, next) => {
+    const expectedToken = process.env.JARVIS_BRIDGE_TOKEN?.trim();
+    const providedToken = String(req.headers['x-jarvis-bridge-token'] ?? '').trim();
+
+    if (!expectedToken || !providedToken || providedToken !== expectedToken) {
+      res.status(401).json({ ok: false, error: 'BRIDGE_UNAUTHORIZED' });
+      return;
+    }
+
+    const idempotencyKey = String(req.headers['idempotency-key'] ?? '').trim();
+    if (!idempotencyKey) {
+      res.status(400).json({ ok: false, error: 'IDEMPOTENCY_KEY_REQUIRED' });
+      return;
+    }
+
+    const body = req.body as Record<string, unknown>;
+    const title = typeof body?.title === 'string' ? body.title.trim() : '';
+    const start = typeof body?.start === 'string' ? body.start.trim() : '';
+    const end = typeof body?.end === 'string' ? body.end.trim() : '';
+    const description = typeof body?.description === 'string' ? body.description.trim() : undefined;
+    const location = typeof body?.location === 'string' ? body.location.trim() : undefined;
+
+    if (!title || !start || !end) {
+      res.status(400).json({ ok: false, error: 'INVALID_BODY' });
+      return;
+    }
+
+    try {
+      const result = await calendarService.createEvent({
+        title,
+        start,
+        end,
+        ...(description ? { description } : {}),
+        ...(location ? { location } : {}),
+      });
+
+      res.json({
+        ok: true,
+        command_id: 'calendar.event.create',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.use('/bridge', router);
 };
