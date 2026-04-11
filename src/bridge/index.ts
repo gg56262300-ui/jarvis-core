@@ -141,5 +141,38 @@ export const registerBridgeModule = (app: Express) => {
     }
   });
 
+  router.patch('/v1/calendar/events/:id', (req, res) => {
+    const expectedToken = process.env.JARVIS_BRIDGE_TOKEN?.trim();
+    const providedToken = String(req.headers['x-jarvis-bridge-token'] ?? '').trim();
+
+    if (!expectedToken || !providedToken || providedToken !== expectedToken) {
+      res.status(401).json({ ok: false, error: 'BRIDGE_UNAUTHORIZED' });
+      return;
+    }
+
+    const idempotencyKey = String(req.headers['idempotency-key'] ?? '').trim();
+    if (!idempotencyKey) {
+      res.status(400).json({ ok: false, error: 'IDEMPOTENCY_KEY_REQUIRED' });
+      return;
+    }
+
+    const eventId = String(req.params.id ?? '').trim();
+    if (!eventId) {
+      res.status(400).json({ ok: false, error: 'INVALID_EVENT_ID' });
+      return;
+    }
+
+    const body = req.body as Record<string, unknown>;
+    const start = typeof body?.start === 'string' ? body.start.trim() : '';
+    const end = typeof body?.end === 'string' ? body.end.trim() : '';
+
+    if (!start || !end) {
+      res.status(400).json({ ok: false, error: 'INVALID_BODY' });
+      return;
+    }
+
+    res.status(501).json({ ok: false, error: 'NOT_IMPLEMENTED_YET' });
+  });
+
   app.use('/bridge', router);
 };
