@@ -41,5 +41,25 @@ export const registerCalendarModule = (app: Express) => {
     }
   });
 
+  router.get('/today', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const rawLimit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 20;
+      const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 50) : 20;
+      const result = await calendarService.listTodayEvents(limit);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/next', async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await calendarService.listUpcomingEvents(1);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.use('/api/calendar', router);
 };
