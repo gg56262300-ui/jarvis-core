@@ -71,5 +71,29 @@ export const registerBridgeModule = (app: Express) => {
     }
   });
 
+  router.get('/v1/calendar/upcoming', async (req, res, next) => {
+    const expectedToken = process.env.JARVIS_BRIDGE_TOKEN?.trim();
+    const providedToken = String(req.headers['x-jarvis-bridge-token'] ?? '').trim();
+
+    if (!expectedToken || !providedToken || providedToken !== expectedToken) {
+      res.status(401).json({ ok: false, error: 'BRIDGE_UNAUTHORIZED' });
+      return;
+    }
+
+    try {
+      const rawLimit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 10;
+      const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 50) : 10;
+      const result = await calendarService.listUpcomingEvents(limit);
+
+      res.json({
+        ok: true,
+        command_id: 'calendar.upcoming',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.use('/bridge', router);
 };
