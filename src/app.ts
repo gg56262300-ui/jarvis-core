@@ -9,6 +9,7 @@ import { registerCalculatorModule } from './calculator/index.js';
 import { registerContactsModule } from './contacts/index.js';
 import { registerCrmModule } from './crm/index.js';
 import { registerGmailModule } from './gmail/index.js';
+import { registerMakeIntegrationModule } from './integrations/make/index.js';
 import { registerJobsModule } from './jobs/index.js';
 import { registerRemindersModule } from './reminders/index.js';
 import { registerTranslationModule } from './translation/index.js';
@@ -16,7 +17,9 @@ import { registerTimeModule } from './time/index.js';
 import { registerVoiceModule } from './voice/index.js';
 import { registerWhatsappModule } from './whatsapp/index.js';
 import { registerWeatherModule } from './weather/index.js';
+import { registerChatModule } from './chat/index.js';
 import { registerDebugRoutes } from './debug/index.js';
+import { registerPushModule } from './push/index.js';
 import { httpLogger } from './shared/logger/http-logger.js';
 import { databaseProvider } from './shared/database/index.js';
 import { errorHandler } from './shared/errors/error-handler.js';
@@ -29,8 +32,10 @@ export const buildApp = () => {
   const app = express();
   const publicDirectory = path.resolve(process.cwd(), 'public');
 
+  app.set('trust proxy', 1);
   app.disable('x-powered-by');
-  app.use(express.json());
+  // Vaikimisi express.json() limiit on ~100kb; voice audio base64 ületab selle enne /api/voice/audio-turn rada.
+  app.use(express.json({ limit: '20mb' }));
   app.use(httpLogger);
   app.use(express.static(publicDirectory));
 
@@ -39,6 +44,7 @@ export const buildApp = () => {
   registerBridgeModule(app);
   registerContactsModule(app);
   registerGmailModule(app);
+  registerMakeIntegrationModule(app);
   registerCalendarModule(app);
   registerCalculatorModule(app);
   registerTranslationModule(app);
@@ -50,6 +56,8 @@ export const buildApp = () => {
   registerRemindersModule(app);
   registerCrmModule(app);
   registerJobsModule(app);
+  registerChatModule(app);
+  registerPushModule(app);
   registerDebugRoutes(app);
 
   app.get('/', (_request, response) => {

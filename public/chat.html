@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Robert — Jarvis</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e8e8e8;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 14px 16px;
+      background: #1a1d27;
+      border-bottom: 1px solid #2a2d3a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    body.pending header {
+      background: #2a1630;
+      border-bottom-color: #4c1d95;
+    }
+
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .sound-toggle {
+      border: 1px solid #2a2d3a;
+      background: #0f1117;
+      color: #e8e8e8;
+      padding: 8px 10px;
+      border-radius: 14px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .sound-toggle.on {
+      border-color: #2bbf7b;
+      background: rgba(62, 207, 142, 0.15);
+    }
+
+    .push-toggle {
+      border: 1px solid #2a2d3a;
+      background: #0f1117;
+      color: #e8e8e8;
+      padding: 8px 10px;
+      border-radius: 14px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .push-toggle.on {
+      border-color: #60a5fa;
+      background: rgba(96, 165, 250, 0.15);
+    }
+
+    .avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6c63ff, #3ecf8e);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 15px; color: white;
+    }
+
+    .header-info h1 { font-size: 16px; font-weight: 600; }
+    .header-info p { font-size: 12px; color: #6b7280; }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+
+    .msg {
+      max-width: 82%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 15px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: #6c63ff;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.assistant {
+      align-self: flex-start;
+      background: #1e2130;
+      color: #e8e8e8;
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.system {
+      align-self: center;
+      background: transparent;
+      color: #4b5563;
+      font-size: 12px;
+      padding: 4px 0;
+    }
+
+    .typing {
+      align-self: flex-start;
+      background: #1e2130;
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      padding: 12px 16px;
+      display: none;
+    }
+
+    .typing span {
+      display: inline-block;
+      width: 7px; height: 7px;
+      background: #6b7280;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+      margin: 0 2px;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    footer {
+      padding: 12px 16px;
+      background: #1a1d27;
+      border-top: 1px solid #2a2d3a;
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    .confirm-bar {
+      display: none;
+      flex: 1;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid #2a2d3a;
+      border-radius: 16px;
+      background: #0f1117;
+    }
+
+    .confirm-bar .label {
+      flex: 1;
+      font-size: 12px;
+      color: #cbd5e1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .confirm-btn {
+      border: 1px solid #2a2d3a;
+      background: #1e2130;
+      color: #e8e8e8;
+      padding: 8px 12px;
+      border-radius: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .confirm-btn.yes { background: #3ecf8e; color: #0f1117; border-color: #2bbf7b; }
+    .confirm-btn.no { background: #ef4444; color: #0f1117; border-color: #dc2626; }
+    .confirm-btn:disabled { opacity: 0.6; cursor: default; }
+
+    #input {
+      flex: 1;
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 20px;
+      padding: 10px 16px;
+      color: #e8e8e8;
+      font-size: 15px;
+      resize: none;
+      max-height: 120px;
+      outline: none;
+      line-height: 1.4;
+    }
+
+    #input:focus { border-color: #6c63ff; }
+    #input::placeholder { color: #4b5563; }
+
+    #send {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      background: #6c63ff;
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+
+    #send:hover { background: #5a52d5; }
+    #send:disabled { background: #2a2d3a; cursor: default; }
+
+    #send svg { fill: white; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="avatar">R</div>
+    <div class="header-info">
+      <h1>Robert</h1>
+      <p id="statusLine">Jarvise assistent</p>
+    </div>
+    <div class="header-actions">
+      <button class="sound-toggle" id="soundToggle" type="button">Sound: OFF</button>
+      <button class="push-toggle" id="pushToggle" type="button">Push: OFF</button>
+    </div>
+  </header>
+
+  <div id="messages">
+    <div class="msg system">Tere! Kuidas saan aidata?</div>
+    <div class="typing" id="typing">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <footer>
+    <div class="confirm-bar" id="confirmBar">
+      <div class="label" id="confirmLabel">Ootan kinnitust…</div>
+      <button class="confirm-btn yes" id="confirmYes">JAH</button>
+      <button class="confirm-btn no" id="confirmNo">EI</button>
+    </div>
+    <textarea id="input" rows="1" placeholder="Kirjuta siia..."></textarea>
+    <button id="send">
+      <svg width="18" height="18" viewBox="0 0 24 24">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </svg>
+    </button>
+  </footer>
+
+  <script>
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const typingEl = document.getElementById('typing');
+    const statusLineEl = document.getElementById('statusLine');
+    const confirmBarEl = document.getElementById('confirmBar');
+    const confirmLabelEl = document.getElementById('confirmLabel');
+    const confirmYesEl = document.getElementById('confirmYes');
+    const confirmNoEl = document.getElementById('confirmNo');
+    const soundToggleEl = document.getElementById('soundToggle');
+    const pushToggleEl = document.getElementById('pushToggle');
+    let history = [];
+    let pendingRequestId = null;
+    let lastNotifiedPendingId = null;
+    let soundEnabled = localStorage.getItem('jarvisSoundEnabled') === '1';
+    let audioCtx = null;
+    let pushEnabled = localStorage.getItem('jarvisPushEnabled') === '1';
+
+    function addMsg(role, text) {
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      div.textContent = text;
+      messagesEl.insertBefore(div, typingEl);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setLoading(on) {
+      typingEl.style.display = on ? 'block' : 'none';
+      sendBtn.disabled = on;
+      inputEl.disabled = on;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setConfirmUi(nextPendingId) {
+      pendingRequestId = nextPendingId;
+      const hasPending = Boolean(pendingRequestId);
+      confirmBarEl.style.display = hasPending ? 'flex' : 'none';
+      document.body.classList.toggle('pending', hasPending);
+      if (statusLineEl) {
+        statusLineEl.textContent = hasPending ? 'Ootan kinnitust' : 'Jarvise assistent';
+      }
+      if (hasPending) {
+        confirmLabelEl.textContent = 'Ootan kinnitust…';
+      }
+    }
+
+    async function refreshPending() {
+      try {
+        const res = await fetch('/api/debug/control-summary-compact', { method: 'GET' });
+        const data = await res.json().catch(() => null);
+        const nextId = data?.summary?.pendingRequestId ?? null;
+
+        const newPendingAppeared = Boolean(nextId) && nextId !== lastNotifiedPendingId;
+        if (newPendingAppeared) lastNotifiedPendingId = nextId;
+
+        setConfirmUi(nextId);
+
+        if (nextId) {
+          const pendingRes = await fetch('/api/debug/terminal-pending', { method: 'GET' });
+          const pendingData = await pendingRes.json().catch(() => null);
+          const label = pendingData?.label || pendingData?.id || null;
+          if (label) {
+            confirmLabelEl.textContent = `Kinnita: ${label}`;
+          }
+        }
+
+        if (newPendingAppeared) {
+          document.title = 'Ootan kinnitust — Robert';
+          if (soundEnabled) {
+            playBeep();
+          }
+        } else if (!nextId) {
+          document.title = 'Robert — Jarvis';
+        }
+      } catch {
+        // keep silent; UI stays as-is
+      }
+    }
+
+    function ensureAudioContext() {
+      if (audioCtx) return audioCtx;
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioCtx = new Ctx();
+      return audioCtx;
+    }
+
+    function playBeep() {
+      const ctx = ensureAudioContext();
+      if (!ctx) return;
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.value = 0.08;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        setTimeout(() => {
+          try { osc.stop(); } catch {}
+        }, 140);
+      } catch {
+        // ignore audio errors
+      }
+    }
+
+    function updateSoundToggleUi() {
+      if (!soundToggleEl) return;
+      soundToggleEl.classList.toggle('on', soundEnabled);
+      soundToggleEl.textContent = soundEnabled ? 'Sound: ON' : 'Sound: OFF';
+    }
+
+    function updatePushToggleUi() {
+      if (!pushToggleEl) return;
+      pushToggleEl.classList.toggle('on', pushEnabled);
+      pushToggleEl.textContent = pushEnabled ? 'Push: ON' : 'Push: OFF';
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+      return outputArray;
+    }
+
+    async function enablePush() {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        addMsg('assistant', 'Push ei ole selles brauseris saadaval.');
+        return false;
+      }
+
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        addMsg('assistant', 'Push teavituste luba ei antud.');
+        return false;
+      }
+
+      const code =
+        prompt(
+          'Pair code: kui .env-is on PUSH_PAIR_CODE, siis see lühike number; muidu kleebi terve JARVIS_BRIDGE_TOKEN.',
+        ) || '';
+      if (!code.trim()) return false;
+
+      const keyRes = await fetch('/api/push/public-key');
+      const keyData = await keyRes.json().catch(() => null);
+      const publicKey = keyData?.publicKey;
+      if (!publicKey) {
+        addMsg('assistant', 'Push võtme päring ebaõnnestus.');
+        return false;
+      }
+
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      const subscribeRes = await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-jarvis-pair-code': code.trim(),
+        },
+        body: JSON.stringify({ subscription: sub, code: code.trim() }),
+      });
+
+      if (!subscribeRes.ok) {
+        const t = await subscribeRes.text().catch(() => '');
+        addMsg('assistant', `Push subscribe ebaõnnestus (HTTP ${subscribeRes.status}). ${t}`.trim());
+        return false;
+      }
+
+      pushEnabled = true;
+      localStorage.setItem('jarvisPushEnabled', '1');
+      updatePushToggleUi();
+      addMsg('assistant', 'OK, push teavitused on sees.');
+      return true;
+    }
+
+    async function disablePush() {
+      pushEnabled = false;
+      localStorage.setItem('jarvisPushEnabled', '0');
+      updatePushToggleUi();
+      addMsg('assistant', 'Push lülitatud välja (subscription jääb serverisse alles).');
+      return true;
+    }
+
+    async function confirmPending() {
+      if (!pendingRequestId) return;
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/debug/terminal-confirm/${encodeURIComponent(pendingRequestId)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) {
+          const t = await res.text().catch(() => '');
+          addMsg('assistant', `Kinnitus ebaõnnestus (HTTP ${res.status}). ${t}`.trim());
+        } else {
+          addMsg('assistant', 'OK, kinnitasin. Jätkame.');
+        }
+      } catch {
+        addMsg('assistant', 'Ühenduse viga. Proovi uuesti.');
+      } finally {
+        setLoading(false);
+        await refreshPending();
+      }
+    }
+
+    async function cancelPending() {
+      if (!pendingRequestId) return;
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/debug/terminal-cancel/${encodeURIComponent(pendingRequestId)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        if (!res.ok) {
+          const t = await res.text().catch(() => '');
+          addMsg('assistant', `Katkestus ebaõnnestus (HTTP ${res.status}). ${t}`.trim());
+        } else {
+          addMsg('assistant', 'OK, katkestasin ootel kinnituse.');
+        }
+      } catch {
+        addMsg('assistant', 'Ühenduse viga. Proovi uuesti.');
+      } finally {
+        setLoading(false);
+        await refreshPending();
+      }
+    }
+
+    async function send() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      // Quick "YES/continue" shortcut:
+      // If the user types "ppp" we try to confirm a pending request (if any),
+      // otherwise we fall back to normal chat send.
+      if (text.toLowerCase() === 'ppp') {
+        addMsg('user', text);
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+        setLoading(true);
+
+        try {
+          await refreshPending();
+          if (!pendingRequestId) {
+            addMsg('assistant', 'Praegu ei ole ühtegi ootel kinnitust.');
+          } else {
+            await confirmPending();
+          }
+        } catch {
+          addMsg('assistant', 'Ühenduse viga. Proovi uuesti.');
+        } finally {
+          setLoading(false);
+          inputEl.focus();
+        }
+
+        return;
+      }
+
+      addMsg('user', text);
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      setLoading(true);
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, history }),
+        });
+        const data = await res.json();
+        const reply = data.reply || data.error || 'Viga';
+        addMsg('assistant', reply);
+        history.push({ role: 'user', content: text });
+        history.push({ role: 'assistant', content: reply });
+        if (history.length > 20) history = history.slice(-20);
+      } catch {
+        addMsg('assistant', 'Ühenduse viga. Proovi uuesti.');
+      } finally {
+        setLoading(false);
+        inputEl.focus();
+      }
+    }
+
+    sendBtn.addEventListener('click', send);
+    confirmYesEl.addEventListener('click', confirmPending);
+    confirmNoEl.addEventListener('click', cancelPending);
+    if (soundToggleEl) {
+      soundToggleEl.addEventListener('click', async () => {
+        soundEnabled = !soundEnabled;
+        localStorage.setItem('jarvisSoundEnabled', soundEnabled ? '1' : '0');
+        updateSoundToggleUi();
+        if (soundEnabled) {
+          const ctx = ensureAudioContext();
+          try { await ctx?.resume?.(); } catch {}
+          playBeep();
+        }
+      });
+    }
+
+    if (pushToggleEl) {
+      pushToggleEl.addEventListener('click', async () => {
+        try {
+          if (pushEnabled) await disablePush();
+          else await enablePush();
+        } catch {
+          addMsg('assistant', 'Push seadistamine ebaõnnestus.');
+        }
+      });
+    }
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
+    });
+
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+    });
+
+    inputEl.focus();
+    updateSoundToggleUi();
+    updatePushToggleUi();
+    refreshPending();
+    setInterval(refreshPending, 2000);
+  </script>
+</body>
+</html>

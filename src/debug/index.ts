@@ -4,6 +4,7 @@ import { undoLastCalendarAction } from '../calendar/calendarUndo.service.js';
 import { randomUUID } from 'node:crypto';
 import { Router, type Express } from 'express';
 import rateLimit from 'express-rate-limit';
+import { pushService } from '../push/push.service.js';
 
 const router = Router();
 
@@ -694,6 +695,10 @@ router.post('/terminal-request/:id', async (req, res) => {
     updatedAt: new Date().toISOString(),
   });
 
+  if (item.requiresConfirmation) {
+    void pushService.notifyPendingConfirmation({ label: item.label, id });
+  }
+
   res.json(pending);
 });
 
@@ -822,6 +827,62 @@ router.post('/terminal-confirm/:requestId', async (req, res) => {
       });
     },
   );
+});
+
+router.post('/terminal-cancel/:requestId', async (req, res) => {
+  const cwd = process.cwd();
+  const pendingPath = path.join(cwd, 'logs', 'terminal-pending.json');
+
+  let pendingRaw: string;
+  try {
+    pendingRaw = await fs.readFile(pendingPath, 'utf8');
+  } catch {
+    res.status(404).json({
+      ok: false,
+      error: 'TERMINAL_PENDING_NOT_FOUND',
+    });
+    return;
+  }
+
+  let pending: Record<string, unknown> | null;
+  try {
+    pending = JSON.parse(pendingRaw);
+  } catch {
+    res.status(400).json({
+      ok: false,
+      error: 'TERMINAL_PENDING_INVALID',
+    });
+    return;
+  }
+
+  const requestId = String(req.params.requestId ?? '').trim();
+  if (!pending?.requestId || pending.requestId !== requestId) {
+    res.status(400).json({
+      ok: false,
+      error: 'TERMINAL_CANCEL_ID_MISMATCH',
+      requestId,
+    });
+    return;
+  }
+
+  const id = String(pending.id ?? '').trim();
+
+  await fs.rm(pendingPath, { force: true });
+  await writeTerminalState(cwd, {
+    ok: true,
+    stage: 'cancelled',
+    requestId,
+    id,
+    status: 'cancelled',
+    updatedAt: new Date().toISOString(),
+  });
+
+  res.json({
+    ok: true,
+    requestId,
+    id,
+    status: 'cancelled',
+  });
 });
 
 router.post('/terminal-run/:id', async (req, res) => {

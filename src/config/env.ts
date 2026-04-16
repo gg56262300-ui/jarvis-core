@@ -1,7 +1,8 @@
 import dotenv from 'dotenv';
 import { z } from 'zod';
 
-dotenv.config();
+// PM2/shell may set empty env keys; default dotenv does not overwrite them, so .env would be ignored.
+dotenv.config({ override: true });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -36,6 +37,12 @@ const envSchema = z.object({
     .transform((value) => value === 'true' || value === '1'),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_CHAT_ID: z.string().optional(),
+  PUSH_PAIR_CODE: z.string().optional(),
+  PUSH_SUBJECT: z.string().optional(),
+  PUSH_SUBSCRIPTIONS_PATH: z.string().optional(),
+  PUSH_VAPID_KEYS_PATH: z.string().optional(),
+  PUSH_VAPID_PUBLIC_KEY: z.string().optional(),
+  PUSH_VAPID_PRIVATE_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
