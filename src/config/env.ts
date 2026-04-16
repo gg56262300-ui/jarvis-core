@@ -18,6 +18,24 @@ const envSchema = z.object({
   CRM_PROVIDER_API_KEY: z.string().optional(),
   REDIS_URL: z.string().optional(),
   REDIS_QUEUE_PREFIX: z.string().default('jarvis'),
+  MAKE_WEBHOOK_URL: z
+    .string()
+    .optional()
+    .transform((value) => (value?.trim() ? value.trim() : undefined)),
+  MAKE_WEBHOOK_TEST_ENABLED: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
+  MAKE_WEBHOOK_NOTIFY_ENABLED: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
+  MAKE_WEBHOOK_FAILED_INSPECT_ENABLED: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
+  TELEGRAM_BOT_TOKEN: z.string().optional(),
+  TELEGRAM_CHAT_ID: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

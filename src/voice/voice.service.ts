@@ -3,6 +3,10 @@ import { CalculatorService } from '../calculator/calculator.service.js';
 import { ContactsService } from '../contacts/contacts.service.js';
 import { GmailService } from '../gmail/gmail.service.js';
 import http from 'node:http';
+import { env } from '../config/index.js';
+import { JARVIS_MAKE_EVENTS } from '../integrations/make/make-events.js';
+import { sendJarvisMakePayload } from '../integrations/make/make-webhook.client.js';
+import { sendTelegramMessage } from '../integrations/telegram/telegram.client.js';
 import { JobsService } from '../jobs/jobs.service.js';
 import { RemindersRepository } from '../reminders/reminders.repository.js';
 import { RemindersService } from '../reminders/reminders.service.js';
@@ -56,6 +60,84 @@ export class VoiceService {
 
   constructor(private readonly voiceAssistantProvider: VoiceAssistantProvider) {
     this.remindersRepository.initialize();
+  }
+
+  private buildReminderSetMakeText(reminder: { title: string; dueAt: string | null }): string {
+    if (reminder.dueAt) {
+      return `${reminder.title} — ${reminder.dueAt}`;
+    }
+    return `${reminder.title} (no due time)`;
+  }
+
+  /** Fire-and-forget notify to Make when URL is configured; failures are logged and stored by the Make client. */
+  private emitReminderSetToMake(reminder: { title: string; dueAt: string | null }): void {
+    const url = env.MAKE_WEBHOOK_URL;
+    if (!url) {
+      return;
+    }
+    void sendJarvisMakePayload(url, {
+      event: JARVIS_MAKE_EVENTS.REMINDER_SET,
+      text: this.buildReminderSetMakeText(reminder),
+    }).then((result) => {
+      if (!result.ok) {
+        logger.warn(
+          {
+            operation: 'voice.reminder.make',
+            event: JARVIS_MAKE_EVENTS.REMINDER_SET,
+            upstreamStatus: result.status,
+          },
+          'Make reminder.set delivery failed',
+        );
+      }
+    });
+  }
+
+  private buildCalendarCreateMakeText(input: { title: string; start: string; end: string }): string {
+    return `${input.title} — ${input.start} — ${input.end}`;
+  }
+
+  private emitCalendarCreateToMake(input: { title: string; start: string; end: string }): void {
+    const url = env.MAKE_WEBHOOK_URL;
+    if (!url) {
+      return;
+    }
+    void sendJarvisMakePayload(url, {
+      event: JARVIS_MAKE_EVENTS.CALENDAR_CREATE,
+      text: this.buildCalendarCreateMakeText(input),
+    }).then((result) => {
+      if (!result.ok) {
+        logger.warn(
+          {
+            operation: 'voice.calendar.create.make',
+            event: JARVIS_MAKE_EVENTS.CALENDAR_CREATE,
+            upstreamStatus: result.status,
+          },
+          'Make calendar.create delivery failed',
+        );
+      }
+    });
+  }
+
+  private emitCalendarQueryToMake(summaryForUser: string): void {
+    const url = env.MAKE_WEBHOOK_URL;
+    if (!url) {
+      return;
+    }
+    void sendJarvisMakePayload(url, {
+      event: JARVIS_MAKE_EVENTS.CALENDAR_QUERY,
+      text: summaryForUser,
+    }).then((result) => {
+      if (!result.ok) {
+        logger.warn(
+          {
+            operation: 'voice.calendar.query.make',
+            event: JARVIS_MAKE_EVENTS.CALENDAR_QUERY,
+            upstreamStatus: result.status,
+          },
+          'Make calendar.query delivery failed',
+        );
+      }
+    });
   }
 
   getPrompt() {
@@ -140,6 +222,8 @@ export class VoiceService {
         title,
         dueAt: parsedReminderCommand.dueAt,
       });
+
+      this.emitReminderSetToMake(reminder);
 
       let queuedJob = null;
 
@@ -397,9 +481,11 @@ export class VoiceService {
       }
 
       if (calendarResult.events.length === 0) {
+        const emptyText = 'Sul ei ole ühtegi tulevast kalendrisündmust.';
+        this.emitCalendarQueryToMake(emptyText);
         return {
           transcript,
-          responseText: 'Sul ei ole ühtegi tulevast kalendrisündmust.',
+          responseText: emptyText,
           locale: 'et-EE',
           inputMode: input.source,
           outputMode: 'text',
@@ -410,6 +496,7 @@ export class VoiceService {
       const nextEvent = calendarResult.events[0];
       const responseText = `Sinu järgmine kalendrisündmus on: ${nextEvent.startText} ${nextEvent.summary}.`;
       const speechText = responseText.replace(/:/g, ' ');
+      this.emitCalendarQueryToMake(responseText);
 
       return {
         transcript,
@@ -428,6 +515,10 @@ export class VoiceService {
 
       const responseText = this.buildCalendarVoiceSummary(calendarResult.responseText);
       const speechText = this.buildCalendarSpeechSummary(calendarResult.responseText);
+
+      if (calendarResult.status === 'ready') {
+        this.emitCalendarQueryToMake(responseText);
+      }
 
       return {
         transcript,
@@ -464,6 +555,17 @@ export class VoiceService {
         start: calendarCreateCommand.start,
         end: calendarCreateCommand.end,
       });
+
+      if (createResult.status === 'created') {
+        this.emitCalendarCreateToMake({
+          title: calendarCreateCommand.title,
+          start: calendarCreateCommand.start,
+          end: calendarCreateCommand.end,
+        });
+        void sendTelegramMessage(
+          `✅ Kalendrisse lisatud:\n<b>${calendarCreateCommand.title}</b>\n🕐 ${calendarCreateCommand.start}`,
+        );
+      }
 
       return {
         transcript,
@@ -1047,7 +1149,7 @@ export class VoiceService {
           .replace(/\(([^)]*)\)/g, '')
           .replace(/,\s*kell\s+/giu, ' kell ')
           .replace(/20:50/g, 'kakskümmend … viiskümmend')
-          .replace(/07:00/g, 'seitse … null null')
+          .replace(/07:00/g, 'seitse … null')
           .replace(/2026/g, 'kaks tuhat kakskümmend kuus')
           .replace(/17\./g, 'seitseteist')
           .replace(/24\./g, 'kakskümmend neli')
