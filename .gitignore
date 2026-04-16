@@ -16,6 +16,8 @@ backups/
 data/calendar-last-action.json
 data/google-contacts-token.json
 data/make-oauth-tokens.json
+data/push-subscriptions.json
+data/push-vapid.json
 data/*.sqlite-shm
 data/*.sqlite-wal
 # Playwright: testid on repodes; salvestatud sisselogimine mitte
