@@ -31,6 +31,9 @@ scripts/trash/
 # Local logs & runtime state (do not commit)
 logs/
 
+# Local scratch / transient outputs
+tmp/
+
 # Local env recovery artifacts (do not commit)
 .env.BROKEN_FROM_TEMPLATE-*
 .env.RECOVERED_*
