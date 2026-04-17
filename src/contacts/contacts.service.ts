@@ -5,6 +5,7 @@ import type { Credentials } from 'google-auth-library';
 import { google } from 'googleapis';
 
 import { env } from '../config/index.js';
+import { resolveGmailStyleRedirectUri } from '../shared/google-oauth/gmail-redirect.js';
 import { AppError } from '../shared/errors/app-error.js';
 
 const CONTACTS_SCOPES = [
@@ -340,7 +341,7 @@ export class ContactsService {
     return new google.auth.OAuth2(
       env.GOOGLE_CLIENT_ID,
       env.GOOGLE_CLIENT_SECRET,
-      env.GOOGLE_REDIRECT_URI,
+      resolveGmailStyleRedirectUri(),
     );
   }
 

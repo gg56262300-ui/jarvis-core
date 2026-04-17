@@ -25,6 +25,7 @@ import { databaseProvider } from './shared/database/index.js';
 import { errorHandler } from './shared/errors/error-handler.js';
 import { notFoundHandler } from './shared/errors/not-found-handler.js';
 import { createHealthRouter } from './shared/http/health.router.js';
+import { registerGoogleOAuthLanding } from './shared/http/google-oauth-landing.js';
 
 export const buildApp = () => {
   databaseProvider.initialize();
@@ -40,6 +41,7 @@ export const buildApp = () => {
   app.use(express.static(publicDirectory));
 
   app.use('/health', createHealthRouter());
+  registerGoogleOAuthLanding(app);
 
   registerBridgeModule(app);
   registerContactsModule(app);

@@ -7,6 +7,7 @@ import type { gmail_v1 } from 'googleapis';
 import type { Credentials } from 'google-auth-library';
 
 import { env } from '../config/index.js';
+import { resolveGmailStyleRedirectUri } from '../shared/google-oauth/gmail-redirect.js';
 import { AppError } from '../shared/errors/app-error.js';
 import { logger } from '../shared/logger/logger.js';
 
@@ -713,7 +714,7 @@ export class GmailService {
     return {
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
-      redirectUri: env.GOOGLE_REDIRECT_URI,
+      redirectUri: resolveGmailStyleRedirectUri(),
     };
   }
 
