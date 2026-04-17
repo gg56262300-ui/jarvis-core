@@ -212,6 +212,7 @@ Terminali marker: iga käsuploki alguses prindi roheline marker printf '\033[1;4
 - Kui vajad infot, küsi ainult 1 konkreetne asi korraga (mitte mitu küsimust).
   Alati: mis rakendus → mis nupp/koht ekraanil → mis täpselt kirjutada → kuhu tulemus läheb.
   Ära kasuta abstraktseid fraase (“võta sealt”, “ava see”) ilma nimetamata: nimi või tee.
+  Kui omanik peab veebis midagi teha (nt GitHub, Google Cloud), anna **vähemalt üks täielik otselink** kujul `https://...` õigesse kohta; ära jäta teda ainult menüüdes otsima.
   Üks tegevus = üks samm; järgmine samm ainult pärast eelmise kinnitust või tulemust.
   Saladused (tokenid, võtmed): mitte chatti; ainult .env, terminal (peidetud sisend) või lõikelaud — kuidas täpselt, samuti samm-sammult.
   Kui on kaks asja järjest (nt token + chat id): esmalt kirjelda, kuidas esimene valmis saada, siis teine; või ütle: “tee X valmis, siis alles käivita käsk”.
@@ -262,3 +263,23 @@ Pärast mõistlikku koodimuudatust või enne “valmis” kinnitust käivita **p
   - portide muutmine (sh 3000)
   - git push / force / rebase; commit ainult omaniku käsul
 - **Tööstiil:** 1 samm korraga ainult siis, kui on vaja sinu sisendit; muidu agent tegutseb ja raporteerib tulemuse.
+
+## TÖÖLUBA (ühekordne, püsiv)
+
+Omanik annab agendile loa töötada autonoomselt järgmistes piirides:
+
+### Agent võib teha ise (ilma kinnitust küsimata)
+
+- diagnostika ja logide kontroll
+- väiksed, pööratavad koodiparandused (stabiilsus/automaatika)
+- dokumentatsiooni täiendused
+- `npm run build`, `npm run lint`, `npm run verify:make-layer`, `npm run gate:fast`, `npm run rrr`
+- PM2 restart ainult siis, kui koodimuudatus vajab (ja `.env` pole muutunud)
+
+### Agent EI tohi teha ilma eraldi käsuta
+
+- `.env` muutmine või saladuste käsitlemine
+- `npm install` / sõltuvuste lisamine
+- `git commit` / `git push` / rebase / force
+- portide muutmine (sh 3000)
+- suured refaktorid ja “puhastused”
