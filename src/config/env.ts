@@ -43,6 +43,15 @@ const envSchema = z.object({
   PUSH_VAPID_KEYS_PATH: z.string().optional(),
   PUSH_VAPID_PUBLIC_KEY: z.string().optional(),
   PUSH_VAPID_PRIVATE_KEY: z.string().optional(),
+  /** Meta WhatsApp Cloud API — veebihooki kinnituse token (Meta dashboard → Webhook). */
+  WHATSAPP_CLOUD_VERIFY_TOKEN: z.string().optional(),
+  /** Meta rakenduse salajane võti — X-Hub-Signature-256 kontrolliks. */
+  WHATSAPP_CLOUD_APP_SECRET: z.string().optional(),
+  /** Graph API püsiva või ajutise juurdepääsu token (sõnumite saatmiseks). */
+  WHATSAPP_CLOUD_ACCESS_TOKEN: z.string().optional(),
+  /** WhatsApp Business telefoninumbri ID (Graph API URL-is). */
+  WHATSAPP_CLOUD_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_CLOUD_GRAPH_VERSION: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
