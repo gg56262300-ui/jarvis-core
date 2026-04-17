@@ -19,6 +19,36 @@ else
 fi
 
 echo
+echo "Google (Gmail / Contacts / Calendar):"
+
+google_status_line() {
+  local label="$1"
+  local url="$2"
+  local body
+  body="$(curl -s -S --max-time 10 "$url" 2>/dev/null || true)"
+  local st
+  st="$(printf "%s" "$body" | json_get status)"
+  case "$st" in
+    ready)
+      echo "- $label: OK"
+      ;;
+    authorization_required)
+      echo "- $label: OAuth puudu (authorization_required)"
+      ;;
+    "")
+      echo "- $label: PROBLEM (ei saanud vastust)"
+      ;;
+    *)
+      echo "- $label: $st"
+      ;;
+  esac
+}
+
+google_status_line "Gmail" "$BASE_URL/api/gmail/inbox?limit=1"
+google_status_line "Contacts" "$BASE_URL/api/contacts/list"
+google_status_line "Calendar" "$BASE_URL/api/calendar/today"
+
+echo
 echo "Integratsioonid:"
 
 make_result="$(curl -s -S --max-time 8 -X POST "$BASE_URL/api/integrations/make/test" 2>/dev/null || true)"
