@@ -58,6 +58,9 @@ export const registerCrmModule = (app: Express) => {
     const name = req.body?.name ? String(req.body.name).trim() : null;
     const tag = req.body?.tag ? String(req.body.tag).trim() : null;
     const notes = req.body?.notes ? String(req.body.notes).trim() : null;
+    const sourceRaw = req.body?.source ? String(req.body.source).trim().toLowerCase() : 'manual';
+    const source =
+      sourceRaw === 'whatsapp' || sourceRaw === 'web' || sourceRaw === 'manual' ? sourceRaw : 'manual';
 
     if (!phone) {
       res.status(400).json({
@@ -71,7 +74,7 @@ export const registerCrmModule = (app: Express) => {
     }
 
     const lead = crmService.createLead({
-      source: 'whatsapp',
+      source,
       phone,
       name,
       tag,

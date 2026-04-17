@@ -1,8 +1,8 @@
 import { databaseProvider } from '../shared/database/index.js';
-import type { CrmLead, CrmLeadMessage, ReminderEvent } from './crm.types.js';
+import type { CrmLead, CrmLeadMessage, CrmLeadSource, ReminderEvent } from './crm.types.js';
 
 type CreateLeadInput = {
-  source: 'whatsapp';
+  source: 'whatsapp' | 'manual' | 'web';
   phone: string;
   name?: string | null;
   tag?: string | null;
@@ -27,7 +27,7 @@ type AddReminderEventInput = {
 
 type CrmLeadRow = {
   id: number;
-  source: 'whatsapp';
+  source: string;
   phone: string;
   name: string | null;
   tag: string | null;
@@ -188,7 +188,7 @@ export class CrmService {
 
     const result = databaseProvider
       .prepare<{
-        source: 'whatsapp';
+        source: string;
         phone: string;
         name: string | null;
         tag: string | null;
@@ -363,10 +363,17 @@ export class CrmService {
     return this.mapReminderEvent(row);
   }
 
+  private normalizeLeadSource(value: string): CrmLeadSource {
+    if (value === 'whatsapp' || value === 'manual' || value === 'web') {
+      return value;
+    }
+    return 'manual';
+  }
+
   private mapLead(row: CrmLeadRow): CrmLead {
     return {
       id: row.id,
-      source: row.source,
+      source: this.normalizeLeadSource(row.source),
       phone: row.phone,
       name: row.name,
       tag: row.tag,

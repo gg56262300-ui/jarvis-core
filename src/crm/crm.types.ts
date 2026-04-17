@@ -1,4 +1,4 @@
-export type CrmLeadSource = 'whatsapp';
+export type CrmLeadSource = 'whatsapp' | 'manual' | 'web';
 
 export type CrmLead = {
   id: number;
