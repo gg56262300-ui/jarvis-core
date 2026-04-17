@@ -15,6 +15,25 @@ export class CalendarController {
     response.json(result);
   }
 
+  async authorizeCallback(request: Request, response: Response) {
+    const code = typeof request.query.code === 'string' ? request.query.code : '';
+
+    if (!code) {
+      response.status(400).send('Missing Google OAuth code (?code=...)');
+      return;
+    }
+
+    try {
+      await this.calendarService.completeAuthorization(code);
+      response
+        .status(200)
+        .send('OK. Google Calendar autoriseeritud. Võid selle akna sulgeda ja minna Jarvise juurde tagasi.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      response.status(500).send(`Google autoriseerimine ebaõnnestus: ${message}`);
+    }
+  }
+
   async authorize(request: Request, response: Response) {
     const input = validateRequestBody(
       googleCalendarAuthorizationSchema,

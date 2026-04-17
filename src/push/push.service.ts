@@ -70,8 +70,11 @@ export class PushService {
       vapid.privateKey,
     );
 
-    const title = 'Jarvis ootab kinnitust';
-    const body = input.label?.trim() || input.id?.trim() || 'Ootel kinnitus';
+    const title = 'Jarvis: vaja kinnitust';
+    const body =
+      input.label?.trim() ||
+      input.id?.trim() ||
+      'Vaja kinnitust — ava Jarvis ja vajuta JAH/EI (või võta ühendust Robertiga).';
     const payload = JSON.stringify({
       title,
       body,

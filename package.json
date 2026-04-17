@@ -15,6 +15,7 @@
     "health": "./scripts/health-check.sh",
     "health:baseline": "./scripts/health-baseline-check.sh",
     "backup": "sh ./scripts/backup-jarvis.sh",
+    "autocheck:once": "node --env-file=.env scripts/jarvis-autocheck.mjs",
     "backup:status": "./scripts/backup-status.sh",
     "backup:freshness": "./scripts/backup-freshness-check.sh",
     "state:gate": "./scripts/state-gate-check.sh",

@@ -27,3 +27,10 @@ test-results/
 playwright-report/
 scripts/archive/
 scripts/trash/
+
+# Local logs & runtime state (do not commit)
+logs/
+
+# Local env recovery artifacts (do not commit)
+.env.BROKEN_FROM_TEMPLATE-*
+.env.RECOVERED_*

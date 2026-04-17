@@ -24,6 +24,10 @@ export const registerCalendarModule = (app: Express) => {
     calendarController.getAuthorizationUrl(request, response),
   ));
 
+  router.get('/google/callback', handleAsync((request, response) =>
+    calendarController.authorizeCallback(request, response),
+  ));
+
   router.post('/google/authorize', handleAsync((request, response) =>
     calendarController.authorize(request, response),
   ));

@@ -392,10 +392,16 @@ export class CalendarService {
       return null;
     }
 
+    const port = Number(env.PORT ?? 3000) || 3000;
+    const defaultCallback = `http://127.0.0.1:${port}/api/calendar/google/callback`;
+    const rawRedirect = env.GOOGLE_REDIRECT_URI.trim();
+    const redirectUri =
+      rawRedirect === 'http://localhost' || rawRedirect === 'http://127.0.0.1' ? defaultCallback : rawRedirect;
+
     return {
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
-      redirectUri: env.GOOGLE_REDIRECT_URI,
+      redirectUri,
     };
   }
 

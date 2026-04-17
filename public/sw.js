@@ -31,6 +31,8 @@ self.addEventListener('push', (event) => {
       body,
       tag: 'jarvis-pending',
       renotify: true,
+      silent: false,
+      requireInteraction: true,
       data: { url },
     });
   })());

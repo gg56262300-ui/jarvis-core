@@ -16,5 +16,10 @@ zip -rq "$ZIP_FILE" jarvis-core \
      "jarvis-core/*.zip" \
      "jarvis-core/logs/*"
 
+# Some zip builds skip dotfiles in the tree walk; always attach .env when present.
+if [[ -f "$PROJECT_DIR/.env" ]]; then
+  (cd "$HOME" && zip -q "$ZIP_FILE" jarvis-core/.env)
+fi
+
 find "$BACKUP_DIR" -type f -name "jarvis-core-*.zip" -mtime +7 -delete
 echo "OK: varukoopia loodud -> $ZIP_FILE"

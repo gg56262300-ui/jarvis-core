@@ -74,6 +74,8 @@ const findEstonianVoice = () => {
   );
 };
 
+// Used in some UI variants; keep available even if not called in current page.
+/* eslint-disable no-unused-vars */
 const speakResponse = (text) => {
   if (!('speechSynthesis' in window) || !text) {
     setStatus('idle');
@@ -98,6 +100,7 @@ const speakResponse = (text) => {
   utterance.onerror = () => setStatus('idle');
   window.speechSynthesis.speak(utterance);
 };
+/* eslint-enable no-unused-vars */
 
 if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = () => {};

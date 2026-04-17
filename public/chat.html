@@ -92,6 +92,45 @@
       scroll-behavior: smooth;
     }
 
+    .msg-wrap {
+      display: flex;
+      max-width: 92%;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    .msg-wrap.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+      margin-left: auto;
+    }
+
+    .msg-wrap.assistant {
+      align-self: flex-start;
+    }
+
+    .msg-wrap.system {
+      align-self: center;
+      max-width: 100%;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .msg-time {
+      font-size: 11px;
+      color: #6b7280;
+      white-space: nowrap;
+      flex-shrink: 0;
+      line-height: 1.3;
+      padding-bottom: 2px;
+      max-width: 96px;
+      text-align: center;
+    }
+
+    .msg-wrap.system .msg-time {
+      color: #4b5563;
+    }
+
     .msg {
       max-width: 82%;
       padding: 10px 14px;
@@ -242,7 +281,10 @@
   </header>
 
   <div id="messages">
-    <div class="msg system">Tere! Kuidas saan aidata?</div>
+    <div class="msg-wrap system">
+      <span class="msg-time" id="greetingTime"></span>
+      <div class="msg system">Tere! Kuidas saan aidata?</div>
+    </div>
     <div class="typing" id="typing">
       <span></span><span></span><span></span>
     </div>
@@ -281,12 +323,28 @@
     let audioCtx = null;
     let pushEnabled = localStorage.getItem('jarvisPushEnabled') === '1';
 
+    function formatMsgTime(d = new Date()) {
+      return d.toLocaleString('et-EE', { dateStyle: 'short', timeStyle: 'short' });
+    }
+
     function addMsg(role, text) {
+      const wrap = document.createElement('div');
+      wrap.className = `msg-wrap ${role}`;
+      const timeEl = document.createElement('span');
+      timeEl.className = 'msg-time';
+      timeEl.textContent = formatMsgTime();
       const div = document.createElement('div');
       div.className = `msg ${role}`;
       div.textContent = text;
-      messagesEl.insertBefore(div, typingEl);
+      wrap.appendChild(timeEl);
+      wrap.appendChild(div);
+      messagesEl.insertBefore(wrap, typingEl);
       messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    const greetingTimeEl = document.getElementById('greetingTime');
+    if (greetingTimeEl) {
+      greetingTimeEl.textContent = formatMsgTime();
     }
 
     function setLoading(on) {
@@ -418,10 +476,14 @@
       }
 
       const reg = await navigator.serviceWorker.register('/sw.js');
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      });
+      // iOS/Safari can throw if a subscription already exists; reuse it when present.
+      const existing = await reg.pushManager.getSubscription().catch(() => null);
+      const sub =
+        existing ||
+        (await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        }));
 
       const subscribeRes = await fetch('/api/push/subscribe', {
         method: 'POST',
