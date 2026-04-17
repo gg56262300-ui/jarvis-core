@@ -237,7 +237,8 @@ Pärast mõistlikku koodimuudatust või enne “valmis” kinnitust käivita **p
 4. Kui `.env` muutus või PM2 võib olla “vanas” keskkonnas: `pm2 restart jarvis --update-env`; muidu piisab `pm2 restart jarvis`
 5. Lühike raport: mis muutus, kas build/lint/health OK
 
-**Ei kuulu vaikimisi tsüklisse (ainult omaniku loal või eraldi ülesandes):** `npm install`, git commit/push, `.env` sisu, portide muutmine, suured refaktorid.
+**Ei kuulu vaikimisi tsüklisse:** `.env` sisu käsitsi “mängimine”, portide muutmine, suured refaktorid.  
+**MAX režiimis** (vt all) võivad `git commit` / `git push` ja vajadusel `npm install` kuuluda agenti autonoomse töövoogu, kui tingimused on täidetud.
 
 ## Kokkuvõte omanikule (lihtne keel, heliks sobiv)
 
@@ -258,10 +259,10 @@ Pärast mõistlikku koodimuudatust või enne “valmis” kinnitust käivita **p
 - **Keelatud ilma küsimata:**
   - saladuste käsitlemine (API võtmed, tokenid) väljaspool `.env`/peidetud sisendit
   - `.env` muutmine või väärtuste paljastamine
-  - uued sõltuvused (npm install) ilma põhjuseta
+  - uued sõltuvused (npm install) ilma põhjuseta — **MAX režiimis** lubatud ainult minimaalne/põhjendatud (vt **MAX režiim**)
   - suured refaktorid, “puhastused”, ümberkorraldused
   - portide muutmine (sh 3000)
-  - git push / force / rebase; commit ainult omaniku käsul
+  - `git push --force`, `rebase`, ajaloo ümberkirjutamine — **MAX režiimis** lubatud `git commit`/`git push` tavalise töövoo raames, kui gate’d läbivad (vt **MAX režiim**)
 - **Tööstiil:** 1 samm korraga ainult siis, kui on vaja sinu sisendit; muidu agent tegutseb ja raporteerib tulemuse.
 
 ## TÖÖLUBA (ühekordne, püsiv)
@@ -278,8 +279,17 @@ Omanik annab agendile loa töötada autonoomselt järgmistes piirides:
 
 ### Agent EI tohi teha ilma eraldi käsuta
 
-- `.env` muutmine või saladuste käsitlemine
-- `npm install` / sõltuvuste lisamine
-- `git commit` / `git push` / rebase / force
+- `.env` muutmine või saladuste käsitlemine (sh tokenite kopeerimine chatti)
 - portide muutmine (sh 3000)
 - suured refaktorid ja “puhastused”
+- `git push --force`, `rebase` ja muu ajaloo ümberkirjutamine
+
+## MAX režiim (omanik kinnitas: KINNITAN MAX)
+
+- **Eesmärk:** vähendada hõõrdumist; fookus lõpptulemusel. “Saladuste” reeglid ei ole hinnang projekti “salajasusele”, vaid kaitse **kogemata lekete** ja **katkestuste** vastu.
+- **Git:** agent võib teha **`git commit`** ja **`git push`**, kui:
+  - projekti hookid/kontrollid (nt pre-commit `gate:fast` ja pre-push `gate:full`) **läbivad**;
+  - commit **ei sisalda** `.env` ega teisi ignore’itud saladusi; `.env` jääb `.gitignore` alla;
+  - **ei** kasutata `force`, `rebase` ega ajaloo ümberkirjutust.
+- **npm install:** lubatud ainult siis, kui see on **minimaalne ja põhjendatud** (nt build/lint/testi parandus), mitte “katsete” või juhuslike pakettide pärast.
+- **Saladused:** ikkagi **mitte chatti**; töö käib `.env` / lõikelaua / peidetud sisendiga.
