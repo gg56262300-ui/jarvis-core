@@ -28,6 +28,8 @@
     "ops:help": "./scripts/ops-help.sh",
     "ops:aliases": "./scripts/ops-aliases.sh",
     "ops:doctor": "./scripts/ops-doctor.sh",
+    "google:oauth:gmail": "node scripts/google-oauth-prompt.mjs gmail",
+    "google:oauth:contacts": "node scripts/google-oauth-prompt.mjs contacts",
     "state:cleanup": "./scripts/state-cleanup-reset.sh",
     "state:cleanup:dry": "./scripts/state-cleanup-reset.sh dry-run",
     "state:cleanup:live": "printf 'CLEANUP\\n' | ./scripts/state-cleanup-reset.sh live",
