@@ -25,6 +25,11 @@ export class SqliteProvider implements DatabaseProvider {
         value TEXT,
         updated_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS calendar_alarm_state (
+        fire_key TEXT PRIMARY KEY,
+        dismissed_at TEXT,
+        snooze_until TEXT
+      );
     `);
 
     logger.info({ dbPath: fullPath }, 'SQLite initialized');

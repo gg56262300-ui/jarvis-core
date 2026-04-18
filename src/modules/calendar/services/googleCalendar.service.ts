@@ -19,6 +19,10 @@ export type CalendarEventItem = {
   start: string;
   end: string;
   location?: string;
+  /** Google: birthday, fromGmail, … */
+  eventType?: string;
+  /** Popup-meeldetuletused (minutid enne sündmuse algust); tühi = ainult e-post või puudub */
+  reminderPopupOffsets?: number[];
 };
 
 export type CreateCalendarEventInput = {
@@ -27,6 +31,8 @@ export type CreateCalendarEventInput = {
   end: string;
   description?: string;
   location?: string;
+  /** nt [10, 60] — Google Calendar popup enne algust */
+  reminderPopupMinutes?: number[];
 };
 
 export type UpdateCalendarEventInput = {
@@ -34,6 +40,68 @@ export type UpdateCalendarEventInput = {
   start: string;
   end: string;
 };
+
+let cachedPrimaryDefaultPopup: { fetchedAt: number; minutes: number[] } | null = null;
+const PRIMARY_DEFAULT_CACHE_MS = 8 * 60 * 1000;
+
+export async function getPrimaryDefaultPopupMinutes(): Promise<number[]> {
+  if (cachedPrimaryDefaultPopup && Date.now() - cachedPrimaryDefaultPopup.fetchedAt < PRIMARY_DEFAULT_CACHE_MS) {
+    return cachedPrimaryDefaultPopup.minutes;
+  }
+  const auth = await createAuthorizedClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+  const res = await calendar.calendarList.get({ calendarId: 'primary' });
+  const dr = res.data.defaultReminders ?? [];
+  const minutes = dr
+    .filter((r) => r.method === 'popup' && typeof r.minutes === 'number')
+    .map((r) => r.minutes as number);
+  const resolved = minutes.length > 0 ? minutes : [10];
+  cachedPrimaryDefaultPopup = { fetchedAt: Date.now(), minutes: resolved };
+  return resolved;
+}
+
+function eventNeedsCalendarDefaultReminders(events: calendar_v3.Schema$Event[]): boolean {
+  for (const e of events) {
+    const r = e.reminders;
+    if (!r) {
+      return true;
+    }
+    if (r.overrides && r.overrides.length > 0) {
+      continue;
+    }
+    if (r.useDefault === false) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+export function mapGoogleEvent(event: calendar_v3.Schema$Event, defaultPopupMinutes: number[]): CalendarEventItem {
+  const r = event.reminders;
+  let reminderPopupOffsets: number[];
+  if (r?.overrides && r.overrides.length > 0) {
+    reminderPopupOffsets = r.overrides
+      .filter((o) => o.method === 'popup' && typeof o.minutes === 'number')
+      .map((o) => o.minutes as number);
+  } else if (r?.useDefault === false && (!r.overrides || r.overrides.length === 0)) {
+    reminderPopupOffsets = [];
+  } else {
+    reminderPopupOffsets = [...defaultPopupMinutes];
+  }
+
+  const eventType = typeof event.eventType === 'string' ? event.eventType : undefined;
+
+  return {
+    id: event.id ?? '',
+    summary: event.summary ?? '(no title)',
+    start: event.start?.dateTime || event.start?.date || '',
+    end: event.end?.dateTime || event.end?.date || '',
+    ...(event.location ? { location: event.location } : {}),
+    ...(eventType ? { eventType } : {}),
+    reminderPopupOffsets,
+  };
+}
 
 export async function listUpcomingEvents(maxResults = 30): Promise<CalendarEventItem[]> {
   const auth = await createAuthorizedClient();
@@ -48,18 +116,9 @@ export async function listUpcomingEvents(maxResults = 30): Promise<CalendarEvent
   });
 
   const events = result.data.items ?? [];
+  const defaultPopup = eventNeedsCalendarDefaultReminders(events) ? await getPrimaryDefaultPopupMinutes() : [];
 
-  return events.map((event) => mapGoogleEvent(event));
-}
-
-function mapGoogleEvent(event: calendar_v3.Schema$Event): CalendarEventItem {
-  return {
-    id: event.id ?? '',
-    summary: event.summary ?? '(no title)',
-    start: event.start?.dateTime || event.start?.date || '',
-    end: event.end?.dateTime || event.end?.date || '',
-    ...(event.location ? { location: event.location } : {}),
-  };
+  return events.map((event) => mapGoogleEvent(event, defaultPopup));
 }
 
 /** YYYY-MM-DD → UTC ISO vahemik (Luxon, Europe/Tallinn vaikimisi). */
@@ -94,7 +153,8 @@ export async function listEventsInTimeRange(
   });
 
   const events = result.data.items ?? [];
-  return events.map((event) => mapGoogleEvent(event));
+  const defaultPopup = eventNeedsCalendarDefaultReminders(events) ? await getPrimaryDefaultPopupMinutes() : [];
+  return events.map((event) => mapGoogleEvent(event, defaultPopup));
 }
 
 /** Järgmised N päeva alates praegusest hetkest (primary kalender). */
@@ -186,7 +246,8 @@ export async function patchCalendarEventById(eventId: string, input: PatchCalend
   });
 
   const event = result.data;
-  return mapGoogleEvent(event);
+  const defaultPopup = await getPrimaryDefaultPopupMinutes();
+  return mapGoogleEvent(event, defaultPopup);
 }
 
 /** Kas ajavahemikku [start,end] kattuvad olemasolevad sündmused (primary)? */
@@ -236,14 +297,26 @@ export async function listTodayEvents(maxResults = 50): Promise<CalendarEventIte
   });
 
   const events = result.data.items ?? [];
+  const defaultPopup = eventNeedsCalendarDefaultReminders(events) ? await getPrimaryDefaultPopupMinutes() : [];
 
-  return events.map((event) => mapGoogleEvent(event));
+  return events.map((event) => mapGoogleEvent(event, defaultPopup));
 }
 
 export async function createCalendarEvent(input: CreateCalendarEventInput) {
 
   const auth = await createAuthorizedClient();
   const calendar = google.calendar({ version: 'v3', auth });
+
+  const reminders =
+    input.reminderPopupMinutes && input.reminderPopupMinutes.length > 0
+      ? {
+          useDefault: false,
+          overrides: input.reminderPopupMinutes.map((minutes) => ({
+            method: 'popup' as const,
+            minutes,
+          })),
+        }
+      : undefined;
 
   const insertResult = await calendar.events.insert({
     calendarId: 'primary',
@@ -259,6 +332,7 @@ export async function createCalendarEvent(input: CreateCalendarEventInput) {
         dateTime: input.end,
         timeZone: DEFAULT_CALENDAR_TIMEZONE,
       },
+      ...(reminders ? { reminders } : {}),
     },
   });
 

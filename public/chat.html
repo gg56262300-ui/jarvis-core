@@ -267,6 +267,100 @@
     #send:disabled { background: #2a2d3a; cursor: default; }
 
     #send svg { fill: white; }
+
+    /* Kalendri äratus (kuni Jah / Ei) */
+    .cal-alarm-root {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(8, 10, 18, 0.78);
+      backdrop-filter: blur(8px);
+    }
+    .cal-alarm-root[hidden] { display: none !important; }
+
+    .cal-alarm-card {
+      max-width: 440px;
+      width: 100%;
+      border-radius: 26px;
+      padding: 26px 22px 20px;
+      text-align: center;
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55);
+      animation: calPulse 2.2s ease-in-out infinite;
+    }
+
+    @keyframes calPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55); }
+      50% { transform: scale(1.02); box-shadow: 0 32px 80px rgba(255, 120, 80, 0.35); }
+    }
+
+    .cal-alarm-card.birthday {
+      background: linear-gradient(155deg, #fff7e6 0%, #ffb4a8 38%, #ff7eb3 72%, #c084fc 100%);
+      color: #1a0a12;
+      border: 3px solid rgba(255, 255, 255, 0.95);
+    }
+
+    .cal-alarm-card.standard {
+      background: linear-gradient(165deg, #0f172a 0%, #7f1d1d 55%, #b45309 100%);
+      color: #fffbeb;
+      border: 2px solid #fb923c;
+    }
+
+    .cal-alarm-eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin-bottom: 8px;
+    }
+
+    .cal-alarm-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      line-height: 1.25;
+    }
+
+    .cal-alarm-meta {
+      font-size: 13px;
+      opacity: 0.88;
+      margin-bottom: 18px;
+      line-height: 1.45;
+    }
+
+    .cal-alarm-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .cal-alarm-btn {
+      border: none;
+      border-radius: 16px;
+      padding: 12px 20px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      min-width: 120px;
+    }
+
+    .cal-alarm-btn.yes {
+      background: #22c55e;
+      color: #052e16;
+    }
+
+    .cal-alarm-btn.no {
+      background: #f97316;
+      color: #1c0a00;
+    }
+
+    .cal-alarm-btn:disabled { opacity: 0.55; cursor: default; }
   </style>
 </head>
 <body>
@@ -306,6 +400,18 @@
     </button>
   </footer>
 
+  <div id="calAlarm" class="cal-alarm-root" hidden>
+    <div class="cal-alarm-card standard" id="calAlarmCard">
+      <div class="cal-alarm-eyebrow" id="calAlarmEyebrow">Kalender</div>
+      <div class="cal-alarm-title" id="calAlarmTitle">Meeldetuletus</div>
+      <div class="cal-alarm-meta" id="calAlarmMeta"></div>
+      <div class="cal-alarm-actions">
+        <button type="button" class="cal-alarm-btn yes" id="calAlarmYes">Jah — lõpeta</button>
+        <button type="button" class="cal-alarm-btn no" id="calAlarmNo">Ei — 10 min hiljem</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const messagesEl = document.getElementById('messages');
     const inputEl = document.getElementById('input');
@@ -324,6 +430,15 @@
     let soundEnabled = localStorage.getItem('jarvisSoundEnabled') === '1';
     let audioCtx = null;
     let pushEnabled = localStorage.getItem('jarvisPushEnabled') === '1';
+    const calAlarmEl = document.getElementById('calAlarm');
+    const calAlarmCardEl = document.getElementById('calAlarmCard');
+    const calAlarmEyebrowEl = document.getElementById('calAlarmEyebrow');
+    const calAlarmTitleEl = document.getElementById('calAlarmTitle');
+    const calAlarmMetaEl = document.getElementById('calAlarmMeta');
+    const calAlarmYesEl = document.getElementById('calAlarmYes');
+    const calAlarmNoEl = document.getElementById('calAlarmNo');
+    let activeCalendarAlarm = null;
+    let calAlarmSoundTimer = null;
 
     function formatMsgTime(d = new Date()) {
       return d.toLocaleString('et-EE', { dateStyle: 'short', timeStyle: 'short' });
@@ -395,7 +510,14 @@
             playBeep();
           }
         } else if (!nextId) {
-          document.title = 'Robert — Jarvis';
+          if (!activeCalendarAlarm) {
+            document.title = 'Robert — Jarvis';
+          } else {
+            document.title =
+              activeCalendarAlarm.kind === 'birthday'
+                ? '🎂 Meeldetuletus — Robert'
+                : 'Meeldetuletus — Robert';
+          }
         }
       } catch {
         // keep silent; UI stays as-is
@@ -427,6 +549,117 @@
         }, 140);
       } catch {
         // ignore audio errors
+      }
+    }
+
+    function playCalendarAlarmChime() {
+      const ctx = ensureAudioContext();
+      if (!ctx) return;
+      const seq = [740, 988, 740, 1108];
+      let i = 0;
+      function step() {
+        if (i >= seq.length) return;
+        try {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = seq[i];
+          gain.gain.value = 0.11;
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          setTimeout(() => {
+            try { osc.stop(); } catch {}
+          }, 160);
+        } catch {}
+        i += 1;
+        setTimeout(step, 200);
+      }
+      step();
+    }
+
+    function clearCalendarAlarmSound() {
+      if (calAlarmSoundTimer) {
+        clearInterval(calAlarmSoundTimer);
+        calAlarmSoundTimer = null;
+      }
+    }
+
+    function startCalendarAlarmSoundLoop() {
+      clearCalendarAlarmSound();
+      if (!soundEnabled || !activeCalendarAlarm) return;
+      playCalendarAlarmChime();
+      calAlarmSoundTimer = setInterval(() => {
+        if (soundEnabled && activeCalendarAlarm) playCalendarAlarmChime();
+      }, 20000);
+    }
+
+    function renderCalendarAlarmOverlay(alarms) {
+      if (!calAlarmEl || !calAlarmCardEl) return;
+      if (!alarms || alarms.length === 0) {
+        calAlarmEl.hidden = true;
+        activeCalendarAlarm = null;
+        clearCalendarAlarmSound();
+        return;
+      }
+
+      const a = alarms[0];
+      activeCalendarAlarm = a;
+      calAlarmEl.hidden = false;
+
+      const isBday = a.kind === 'birthday';
+      calAlarmCardEl.className = 'cal-alarm-card ' + (isBday ? 'birthday' : 'standard');
+      if (calAlarmEyebrowEl) {
+        calAlarmEyebrowEl.textContent = isBday ? 'Eriline päev' : 'Kalendri äratus';
+      }
+      if (calAlarmTitleEl) {
+        calAlarmTitleEl.textContent = a.summary || 'Sündmus';
+      }
+      const loc = a.location ? `\n📍 ${a.location}` : '';
+      if (calAlarmMetaEl) {
+        calAlarmMetaEl.textContent =
+          `Algus / lõpp kalendris: ${a.start} → ${a.end}${loc}\n\nKuni ei vajuta nuppu, tuletan meelde uuesti (heli: ülemine Sound lüliti).`;
+      }
+
+      document.title = isBday ? '🎂 Meeldetuletus — Robert' : 'Meeldetuletus — Robert';
+      startCalendarAlarmSoundLoop();
+    }
+
+    async function refreshCalendarAlarms() {
+      if (!calAlarmEl) return;
+      try {
+        const res = await fetch('/api/calendar/alarms/due', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        const alarms = Array.isArray(data?.alarms) ? data.alarms : [];
+        renderCalendarAlarmOverlay(alarms);
+        if (!alarms.length && document.title.includes('Meeldetuletus')) {
+          document.title = 'Robert — Jarvis';
+        }
+      } catch {
+        // vaikne
+      }
+    }
+
+    async function postCalendarAlarmAck(action) {
+      if (!activeCalendarAlarm?.fireKey) return;
+      const body =
+        action === 'snooze'
+          ? { fireKey: activeCalendarAlarm.fireKey, action: 'snooze', snoozeMinutes: 10 }
+          : { fireKey: activeCalendarAlarm.fireKey, action: 'dismiss' };
+      try {
+        const res = await fetch('/api/calendar/alarms/ack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          addMsg('assistant', `Kalendri äratus ei salvestunud (HTTP ${res.status}).`);
+        }
+      } catch {
+        addMsg('assistant', 'Kalendri äratus: ühenduse viga.');
+      } finally {
+        await refreshCalendarAlarms();
       }
     }
 
@@ -656,6 +889,7 @@
           const ctx = ensureAudioContext();
           try { await ctx?.resume?.(); } catch {}
           playBeep();
+          if (activeCalendarAlarm) startCalendarAlarmSoundLoop();
         }
       });
     }
@@ -690,6 +924,12 @@
     updatePushToggleUi();
     refreshPending();
     setInterval(refreshPending, 2000);
+
+    if (calAlarmYesEl) calAlarmYesEl.addEventListener('click', () => postCalendarAlarmAck('dismiss'));
+    if (calAlarmNoEl) calAlarmNoEl.addEventListener('click', () => postCalendarAlarmAck('snooze'));
+
+    refreshCalendarAlarms();
+    setInterval(refreshCalendarAlarms, 12000);
   </script>
 </body>
 </html>

@@ -1,6 +1,11 @@
 import { Router, type Express, type NextFunction, type Request, type Response } from 'express';
 
 import { CalendarController } from './calendar.controller.js';
+import {
+  ackCalendarAlarmDismiss,
+  ackCalendarAlarmSnooze,
+  listDueCalendarAlarms,
+} from './calendarAlarm.service.js';
 import { CalendarService } from './calendar.service.js';
 
 export const registerCalendarModule = (app: Express) => {
@@ -60,6 +65,39 @@ export const registerCalendarModule = (app: Express) => {
     try {
       const result = await calendarService.listUpcomingEvents(1);
       res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/alarms/due', async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const alarms = await listDueCalendarAlarms();
+      res.json({ alarms });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/alarms/ack', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const fireKey = typeof req.body?.fireKey === 'string' ? req.body.fireKey.trim() : '';
+      const action = req.body?.action === 'snooze' ? 'snooze' : 'dismiss';
+      const rawSnooze = Number(req.body?.snoozeMinutes);
+      const snoozeMinutes = Number.isFinite(rawSnooze) && rawSnooze > 0 ? Math.min(rawSnooze, 24 * 60) : 10;
+
+      if (!fireKey) {
+        res.status(400).json({ error: 'fireKey on kohustuslik' });
+        return;
+      }
+
+      if (action === 'dismiss') {
+        ackCalendarAlarmDismiss(fireKey);
+      } else {
+        ackCalendarAlarmSnooze(fireKey, snoozeMinutes);
+      }
+
+      res.json({ ok: true });
     } catch (error) {
       next(error);
     }

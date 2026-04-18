@@ -28,7 +28,7 @@ REEGLID:
 - Ole sõbralik nagu hea kolleeg
 
 VÕIMED:
-- Google Calendar: lisada, vaadata vahemikku, kustutada (ID või terve päev), muuta pealkiri/asukohta/aega, kattuvuste kontroll
+- Google Calendar: lisada (sh popup meeldetuletused), vaadata vahemikku, kustutada (ID või terve päev), muuta pealkiri/asukohta/aega, kattuvuste kontroll; sünnipäevad ja telefonist sünkitud sündmused on kalendris nagu teised sündmused — Jarvis chat näitab tüüpi/remindereid loendis
 - Pidada vestlust ja anda nõu
 
 AJAVÖÖND: Vaikimisi ${DEFAULT_CALENDAR_TIMEZONE}. Kuupäevad kujul YYYY-MM-DD tõlgendatakse selles tsoonis.
@@ -42,7 +42,12 @@ function formatCalendarEventsForTool(events: CalendarEventItem[]): string {
   return events
     .map((e) => {
       const loc = e.location ? ` | ${e.location}` : '';
-      return `• id=${e.id} | ${e.summary} | ${e.start} → ${e.end}${loc}`;
+      const typ = e.eventType ? ` | tüüp=${e.eventType}` : '';
+      const rem =
+        e.reminderPopupOffsets && e.reminderPopupOffsets.length
+          ? ` | popup=minutit enne: ${e.reminderPopupOffsets.join(',')}`
+          : ' | popup=minutit enne: (puudub või ainult vaikimisi meil)';
+      return `• id=${e.id} | ${e.summary} | ${e.start} → ${e.end}${loc}${typ}${rem}`;
     })
     .join('\n');
 }
@@ -61,6 +66,11 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
           end: { type: 'string', description: 'Lõpp ISO 8601' },
           location: { type: 'string', description: 'Asukoht (valikuline)' },
           description: { type: 'string', description: 'Kirjeldus (valikuline)' },
+          reminder_popup_minutes: {
+            type: 'array',
+            items: { type: 'number' },
+            description: 'Google popup meeldetuletused minutites enne algust, nt [10, 60]; valikuline',
+          },
         },
         required: ['title', 'start', 'end'],
       },
@@ -151,12 +161,18 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
 async function runTool(name: string, args: Record<string, unknown>): Promise<string> {
   if (name === 'create_calendar_event') {
     try {
+      const rawRem = args.reminder_popup_minutes;
+      const reminderPopupMinutes = Array.isArray(rawRem)
+        ? rawRem.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n >= 0 && n <= 40320)
+        : undefined;
+
       const result = await createCalendarEvent({
         title: args.title as string,
         start: args.start as string,
         end: args.end as string,
         description: typeof args.description === 'string' ? args.description : undefined,
         location: typeof args.location === 'string' ? args.location : undefined,
+        ...(reminderPopupMinutes?.length ? { reminderPopupMinutes } : {}),
       });
       void sendTelegramMessage(`✅ Kalendrisse lisatud:\n<b>${args.title}</b>\n🕐 ${args.start}`);
       return `Lisatud id=${result.id}.`;
