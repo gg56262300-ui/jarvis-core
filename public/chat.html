@@ -189,25 +189,120 @@
       30% { transform: translateY(-6px); }
     }
 
-    footer {
-      padding: 12px 16px;
+    .footer-stack {
+      padding: 10px 12px 12px;
       background: #1a1d27;
       border-top: 1px solid #2a2d3a;
-      display: flex;
-      gap: 8px;
-      align-items: flex-end;
       flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
     .confirm-bar {
       display: none;
-      flex: 1;
+      width: 100%;
       align-items: center;
       gap: 8px;
       padding: 8px 10px;
       border: 1px solid #2a2d3a;
       border-radius: 16px;
       background: #0f1117;
+    }
+
+    .reply-confirm-row {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 6px 4px 2px;
+    }
+
+    .reply-confirm-row[hidden] {
+      display: none !important;
+    }
+
+    .reply-confirm-label {
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-right: 4px;
+    }
+
+    .reply-confirm-btn {
+      border: 1px solid #2a2d3a;
+      padding: 10px 18px;
+      border-radius: 16px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .reply-confirm-btn.yes {
+      background: #22c55e;
+      color: #052e16;
+      border-color: #16a34a;
+    }
+
+    .reply-confirm-btn.no {
+      background: #475569;
+      color: #f1f5f9;
+      border-color: #64748b;
+    }
+
+    .footer-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      width: 100%;
+    }
+
+    .voice-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid #2a2d3a;
+      background: #0f1117;
+      color: #e8e8e8;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .voice-btn:hover {
+      border-color: #6c63ff;
+    }
+
+    .voice-btn.listening {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.2);
+      animation: voicePulse 1s ease-in-out infinite;
+    }
+
+    @keyframes voicePulse {
+      50% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35); }
+    }
+
+    body.chat-reply-confirm-active #input {
+      flex: 1 1 38%;
+      min-width: 0;
+      max-width: min(52vw, 220px);
+    }
+
+    @media (min-width: 480px) {
+      body.chat-reply-confirm-active #input {
+        max-width: 280px;
+      }
     }
 
     .confirm-bar .label {
@@ -237,6 +332,7 @@
 
     #input {
       flex: 1;
+      min-width: 0;
       background: #0f1117;
       border: 1px solid #2a2d3a;
       border-radius: 20px;
@@ -386,18 +482,26 @@
     </div>
   </div>
 
-  <footer>
+  <footer class="footer-stack">
     <div class="confirm-bar" id="confirmBar">
       <div class="label" id="confirmLabel">Ootan kinnitust…</div>
       <button class="confirm-btn yes" id="confirmYes">JAH</button>
       <button class="confirm-btn no" id="confirmNo">EI</button>
     </div>
-    <textarea id="input" rows="1" placeholder="Kirjuta siia..."></textarea>
-    <button id="send">
-      <svg width="18" height="18" viewBox="0 0 24 24">
-        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-      </svg>
-    </button>
+    <div id="replyConfirmRow" class="reply-confirm-row" hidden>
+      <span class="reply-confirm-label">Vasta</span>
+      <button type="button" class="reply-confirm-btn yes" id="replyConfirmYes">Jah</button>
+      <button type="button" class="reply-confirm-btn no" id="replyConfirmNo">Ei</button>
+    </div>
+    <div class="footer-input-row">
+      <button type="button" class="voice-btn" id="voiceBtn" title="Häälkäsk. Pikk vajutus = vaheta et/ru.">🎤</button>
+      <textarea id="input" rows="1" placeholder="Kirjuta siia..."></textarea>
+      <button id="send" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      </button>
+    </div>
   </footer>
 
   <div id="calAlarm" class="cal-alarm-root" hidden>
@@ -440,6 +544,85 @@
     let activeCalendarAlarm = null;
     let calAlarmSoundTimer = null;
 
+    const replyConfirmRowEl = document.getElementById('replyConfirmRow');
+    const replyConfirmYesEl = document.getElementById('replyConfirmYes');
+    const replyConfirmNoEl = document.getElementById('replyConfirmNo');
+    const voiceBtnEl = document.getElementById('voiceBtn');
+    let speechLang = localStorage.getItem('jarvisSpeechLang') || 'et-EE';
+    let speechRecognition = null;
+    let suppressVoiceClick = false;
+
+    function hideReplyConfirm() {
+      if (replyConfirmRowEl) replyConfirmRowEl.hidden = true;
+      document.body.classList.remove('chat-reply-confirm-active');
+    }
+
+    function assistantMessageSuggestsConfirmation(text) {
+      const raw = (text || '').trim();
+      if (raw.length < 14) return false;
+      if (!/\?\s*$/.test(raw)) return false;
+      const lower = raw.toLowerCase();
+      if (
+        /kas soovid|kas kinnitad|kas ma pean|eemaldaksin|kustutada|kustutan|soovid, et/i.test(lower)
+      ) {
+        return true;
+      }
+      if (/хотите|удалить|подтверж|убрать|очистить|удаляю/i.test(raw)) return true;
+      if (/(do you want|should i remove|confirm|delete these)/i.test(lower)) return true;
+      return false;
+    }
+
+    function showReplyConfirmIfNeeded(assistantText) {
+      if (!replyConfirmRowEl) return;
+      if (!assistantMessageSuggestsConfirmation(assistantText)) {
+        hideReplyConfirm();
+        return;
+      }
+      replyConfirmRowEl.hidden = false;
+      document.body.classList.add('chat-reply-confirm-active');
+      if (soundEnabled) playBeep();
+    }
+
+    function initSpeechRecognition() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return null;
+      const r = new SR();
+      r.continuous = false;
+      r.interimResults = false;
+      r.maxAlternatives = 1;
+      r.onresult = (ev) => {
+        const t = ev.results[0]?.[0]?.transcript?.trim();
+        if (t) {
+          inputEl.value = (inputEl.value ? `${inputEl.value} ` : '') + t;
+          inputEl.dispatchEvent(new Event('input'));
+        }
+        if (voiceBtnEl) voiceBtnEl.classList.remove('listening');
+      };
+      r.onerror = () => {
+        if (voiceBtnEl) voiceBtnEl.classList.remove('listening');
+      };
+      r.onend = () => {
+        if (voiceBtnEl) voiceBtnEl.classList.remove('listening');
+      };
+      return r;
+    }
+
+    speechRecognition = initSpeechRecognition();
+    function cycleSpeechLang() {
+      speechLang = speechLang === 'et-EE' ? 'ru-RU' : 'et-EE';
+      localStorage.setItem('jarvisSpeechLang', speechLang);
+      if (voiceBtnEl) {
+        voiceBtnEl.title = `Häälkäsk (${speechLang}). Pikk vajutus (või paremklõps) = vaheta eesti ↔ vene.`;
+      }
+      addMsg(
+        'assistant',
+        `Hääle tuvastus: ${speechLang === 'et-EE' ? 'eesti (et-EE)' : 'vene (ru-RU)'}. Vihje: brauseri Web Speech ei taga 100% keelt — teksti saad alati käsitsi parandada.`,
+      );
+    }
+    if (voiceBtnEl) {
+      voiceBtnEl.title = `Häälkäsk (${speechLang}). Pikk vajutus = vaheta eesti ↔ vene.`;
+    }
+
     function formatMsgTime(d = new Date()) {
       return d.toLocaleString('et-EE', { dateStyle: 'short', timeStyle: 'short' });
     }
@@ -468,6 +651,7 @@
       typingEl.style.display = on ? 'block' : 'none';
       sendBtn.disabled = on;
       inputEl.disabled = on;
+      if (voiceBtnEl) voiceBtnEl.disabled = on;
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
@@ -814,6 +998,7 @@
     }
 
     async function send() {
+      hideReplyConfirm();
       const text = inputEl.value.trim();
       if (!text) return;
 
@@ -862,19 +1047,91 @@
             data.reply ||
             'Päring ebaõnnestus';
           addMsg('assistant', `Viga (HTTP ${res.status}): ${errMsg}`);
+          hideReplyConfirm();
         } else {
           const reply = data.reply || data.error || 'Viga';
           addMsg('assistant', reply);
+          showReplyConfirmIfNeeded(reply);
           history.push({ role: 'user', content: text });
           history.push({ role: 'assistant', content: reply });
           if (history.length > 20) history = history.slice(-20);
         }
       } catch {
         addMsg('assistant', 'Ühenduse viga. Proovi uuesti.');
+        hideReplyConfirm();
       } finally {
         setLoading(false);
         inputEl.focus();
       }
+    }
+
+    if (replyConfirmYesEl) {
+      replyConfirmYesEl.addEventListener('click', () => {
+        inputEl.value =
+          'Jah — palun kinnita ja tee see tegevus täielikult (kasuta vajadusel kalendri tööriistu delete_calendar_events või event_ids).';
+        send();
+      });
+    }
+    if (replyConfirmNoEl) {
+      replyConfirmNoEl.addEventListener('click', () => {
+        inputEl.value = 'Ei, ära tee seda tegevust.';
+        send();
+      });
+    }
+
+    if (voiceBtnEl) {
+      let voiceLongTimer = null;
+      const clearVoiceLong = () => {
+        if (voiceLongTimer) {
+          clearTimeout(voiceLongTimer);
+          voiceLongTimer = null;
+        }
+      };
+      voiceBtnEl.addEventListener('touchstart', () => {
+        clearVoiceLong();
+        voiceLongTimer = setTimeout(() => {
+          voiceLongTimer = null;
+          suppressVoiceClick = true;
+          setTimeout(() => {
+            suppressVoiceClick = false;
+          }, 450);
+          cycleSpeechLang();
+          try {
+            navigator.vibrate?.(15);
+          } catch {}
+        }, 650);
+      }, { passive: true });
+      voiceBtnEl.addEventListener('touchend', clearVoiceLong);
+      voiceBtnEl.addEventListener('touchcancel', clearVoiceLong);
+      voiceBtnEl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        cycleSpeechLang();
+      });
+      voiceBtnEl.addEventListener('click', () => {
+        if (suppressVoiceClick) return;
+        if (voiceBtnEl.disabled) return;
+        if (!speechRecognition) {
+          addMsg(
+            'assistant',
+            'Häältuvastus ei ole selles brauseris toetatud (Chrome Android / Chrome töölaud töötab kõige paremini).',
+          );
+          return;
+        }
+        if (voiceBtnEl.classList.contains('listening')) {
+          try {
+            speechRecognition.stop();
+          } catch {}
+          return;
+        }
+        try {
+          speechRecognition.lang = speechLang;
+          voiceBtnEl.classList.add('listening');
+          speechRecognition.start();
+        } catch {
+          voiceBtnEl.classList.remove('listening');
+          addMsg('assistant', 'Mikrofoni ei saanud käivitada — kontrolli brauseri luba.');
+        }
+      });
     }
 
     sendBtn.addEventListener('click', send);
