@@ -134,6 +134,111 @@ export function calendarDayToUtcRangeISO(
   return { timeMin: start.toUTC().toISO()!, timeMax: end.toUTC().toISO()! };
 }
 
+/**
+ * Sündmuse algus/lõpp millisekundites (kogu päeva sündmused: Google `date` → kohalik tsoon).
+ */
+export function calendarEventToMillisBounds(
+  item: CalendarEventItem,
+  timeZone = DEFAULT_CALENDAR_TIMEZONE,
+): { startMs: number; endMs: number } | null {
+  const s = item.start;
+  const e = item.end || item.start;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const startDt = DateTime.fromISO(s, { zone: timeZone }).startOf('day');
+    if (!startDt.isValid) {
+      return null;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(e)) {
+      const endExclusive = DateTime.fromISO(e, { zone: timeZone }).startOf('day');
+      if (!endExclusive.isValid) {
+        return null;
+      }
+      const endMs = endExclusive.toMillis() - 1;
+      return { startMs: startDt.toMillis(), endMs };
+    }
+  }
+
+  const startMs = new Date(s).getTime();
+  const endMs = new Date(e).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+    return null;
+  }
+  return { startMs, endMs };
+}
+
+/**
+ * Google `events.list` filtreerib vaikimisi sündmuse *alguse* järgi — mitmepäevane või varem alanud
+ * sündmus ei jõua kitsasse päevavahemikku. See funktsioon teeb laia päringu + kattuvuse kohalikus tsoonis.
+ */
+export async function listEventsOverlappingLocalInclusiveRange(
+  dateFromYmd: string,
+  dateToYmd: string,
+  timeZone = DEFAULT_CALENDAR_TIMEZONE,
+  options?: { maxApiResults?: number },
+): Promise<CalendarEventItem[]> {
+  const fromDay = DateTime.fromISO(dateFromYmd, { zone: timeZone }).startOf('day');
+  const toDay = DateTime.fromISO(dateToYmd, { zone: timeZone }).endOf('day');
+  if (!fromDay.isValid || !toDay.isValid || toDay < fromDay) {
+    throw new Error(`Vigane kuupäevavahemik: ${dateFromYmd} … ${dateToYmd}`);
+  }
+
+  const padDays = 400;
+  const timeMin = fromDay.minus({ days: padDays }).toUTC().toISO()!;
+  const timeMax = toDay.plus({ days: 2 }).toUTC().toISO()!;
+  const maxTotal = options?.maxApiResults ?? 8000;
+
+  const raw = await listEventsInTimeRangePaginated(timeMin, timeMax, maxTotal);
+  const rangeStartMs = fromDay.toMillis();
+  const rangeEndMs = toDay.toMillis();
+
+  return raw.filter((ev) => {
+    const b = calendarEventToMillisBounds(ev, timeZone);
+    if (!b) {
+      return false;
+    }
+    return b.startMs <= rangeEndMs && b.endMs >= rangeStartMs;
+  });
+}
+
+async function listEventsInTimeRangePaginated(
+  timeMin: string,
+  timeMax: string,
+  maxTotal: number,
+): Promise<CalendarEventItem[]> {
+  const auth = await createAuthorizedClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+  const defaultPopup = await getPrimaryDefaultPopupMinutes();
+
+  const out: CalendarEventItem[] = [];
+  let pageToken: string | undefined;
+
+  while (out.length < maxTotal) {
+    const remaining = maxTotal - out.length;
+    const pageSize = Math.min(2500, remaining);
+    const result = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin,
+      timeMax,
+      maxResults: pageSize,
+      singleEvents: true,
+      orderBy: 'startTime',
+      pageToken,
+    });
+
+    const events = result.data.items ?? [];
+    for (const ev of events) {
+      out.push(mapGoogleEvent(ev, defaultPopup));
+    }
+    pageToken = result.data.nextPageToken ?? undefined;
+    if (!pageToken) {
+      break;
+    }
+  }
+
+  return out;
+}
+
 /** Sündmused vahemikus (RFC3339 timeMin/timeMax). */
 export async function listEventsInTimeRange(
   timeMin: string,
@@ -176,8 +281,8 @@ export async function deleteAllEventsOnCalendarDates(
   const seen = new Set<string>();
 
   for (const d of datesYmd) {
-    const { timeMin, timeMax } = calendarDayToUtcRangeISO(d.trim(), timeZone);
-    const events = await listEventsInTimeRange(timeMin, timeMax, 100);
+    const day = d.trim();
+    const events = await listEventsOverlappingLocalInclusiveRange(day, day, timeZone, { maxApiResults: 8000 });
     for (const ev of events) {
       if (!ev.id || seen.has(ev.id)) continue;
       if (deletedIds.length >= MAX_BULK_DELETE) {

@@ -2,12 +2,11 @@ import type { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { env } from '../config/index.js';
 import {
-  calendarDayToUtcRangeISO,
   createCalendarEvent,
   DEFAULT_CALENDAR_TIMEZONE,
   deleteAllEventsOnCalendarDates,
   deleteCalendarEventById,
-  listEventsInTimeRange,
+  listEventsOverlappingLocalInclusiveRange,
   listEventsOverlappingRange,
   listUpcomingEventsWithinDays,
   patchCalendarEventById,
@@ -103,7 +102,7 @@ const tools: OpenAI.Chat.ChatCompletionTool[] = [
     function: {
       name: 'delete_calendar_events',
       description:
-        'Kustuta sündmusi. Kasuta event_ids (üks või mitu Google event id) VÕI dates (terve päev tühjaks YYYY-MM-DD, mitu päeva korraga).',
+        'Kustuta sündmusi. Kasuta event_ids (üks või mitu Google event id) VÕI dates (terve päev tühjaks YYYY-MM-DD koos aastaga, nt 2026-04-17; mitu päeva korraga). Kustutatakse kõik, mis sellel päeval kattub (sh mitmepäevased). Enne väidet „tühi“ kasuta list_calendar_events date_range.',
       parameters: {
         type: 'object',
         properties: {
@@ -189,11 +188,9 @@ async function runTool(name: string, args: Record<string, unknown>): Promise<str
         const from = String(args.date_from ?? '').trim();
         const to = String(args.date_to ?? '').trim();
         if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
-          return 'Viga: date_from ja date_to peavad olema YYYY-MM-DD.';
+          return 'Viga: date_from ja date_to peavad olema YYYY-MM-DD (koos aastaga).';
         }
-        const tMin = calendarDayToUtcRangeISO(from).timeMin;
-        const tMax = calendarDayToUtcRangeISO(to).timeMax;
-        const events = await listEventsInTimeRange(tMin, tMax, 100);
+        const events = await listEventsOverlappingLocalInclusiveRange(from, to);
         return formatCalendarEventsForTool(events);
       }
       const days = Math.min(120, Math.max(1, Number(args.upcoming_days) || 7));
