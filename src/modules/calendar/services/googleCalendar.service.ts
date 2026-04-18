@@ -1,18 +1,24 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { DateTime } from 'luxon';
 import { google } from 'googleapis';
+import type { calendar_v3 } from 'googleapis';
 import type { Credentials } from 'google-auth-library';
 
 import { env } from '../../../config/index.js';
 
 const TOKEN_PATH = path.join(process.cwd(), 'data/google-calendar-token.json');
 
+/** Vaikimisi Kaido ajavöönd; ülekirjutamiseks: JARVIS_CALENDAR_TIMEZONE */
+export const DEFAULT_CALENDAR_TIMEZONE = process.env.JARVIS_CALENDAR_TIMEZONE ?? 'Europe/Tallinn';
+
 export type CalendarEventItem = {
   id: string;
   summary: string;
   start: string;
   end: string;
+  location?: string;
 };
 
 export type CreateCalendarEventInput = {
@@ -43,12 +49,171 @@ export async function listUpcomingEvents(maxResults = 30): Promise<CalendarEvent
 
   const events = result.data.items ?? [];
 
-  return events.map((event) => ({
+  return events.map((event) => mapGoogleEvent(event));
+}
+
+function mapGoogleEvent(event: calendar_v3.Schema$Event): CalendarEventItem {
+  return {
     id: event.id ?? '',
     summary: event.summary ?? '(no title)',
     start: event.start?.dateTime || event.start?.date || '',
     end: event.end?.dateTime || event.end?.date || '',
-  }));
+    ...(event.location ? { location: event.location } : {}),
+  };
+}
+
+/** YYYY-MM-DD → UTC ISO vahemik (Luxon, Europe/Tallinn vaikimisi). */
+export function calendarDayToUtcRangeISO(
+  dateYmd: string,
+  timeZone = DEFAULT_CALENDAR_TIMEZONE,
+): { timeMin: string; timeMax: string } {
+  const start = DateTime.fromISO(dateYmd, { zone: timeZone }).startOf('day');
+  const end = DateTime.fromISO(dateYmd, { zone: timeZone }).endOf('day');
+  if (!start.isValid || !end.isValid) {
+    throw new Error(`Vigane kuupäev: ${dateYmd}`);
+  }
+  return { timeMin: start.toUTC().toISO()!, timeMax: end.toUTC().toISO()! };
+}
+
+/** Sündmused vahemikus (RFC3339 timeMin/timeMax). */
+export async function listEventsInTimeRange(
+  timeMin: string,
+  timeMax: string,
+  maxResults = 100,
+): Promise<CalendarEventItem[]> {
+  const auth = await createAuthorizedClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const result = await calendar.events.list({
+    calendarId: 'primary',
+    timeMin,
+    timeMax,
+    maxResults,
+    singleEvents: true,
+    orderBy: 'startTime',
+  });
+
+  const events = result.data.items ?? [];
+  return events.map((event) => mapGoogleEvent(event));
+}
+
+/** Järgmised N päeva alates praegusest hetkest (primary kalender). */
+export async function listUpcomingEventsWithinDays(days: number, maxResults = 80): Promise<CalendarEventItem[]> {
+  const from = DateTime.now().setZone(DEFAULT_CALENDAR_TIMEZONE).toUTC();
+  const to = from.plus({ days: Math.max(1, Math.min(days, 366)) });
+  return listEventsInTimeRange(from.toISO()!, to.toISO()!, maxResults);
+}
+
+const MAX_BULK_DELETE = 60;
+
+/** Kustuta kõik sündmused antud kalendripäevadel (üksikud instantsid, k.a korduvad lahti lõhutud). */
+export async function deleteAllEventsOnCalendarDates(
+  datesYmd: string[],
+  timeZone = DEFAULT_CALENDAR_TIMEZONE,
+): Promise<{ deleted: number; deletedIds: string[]; notes: string[] }> {
+  const notes: string[] = [];
+  const deletedIds: string[] = [];
+  const seen = new Set<string>();
+
+  for (const d of datesYmd) {
+    const { timeMin, timeMax } = calendarDayToUtcRangeISO(d.trim(), timeZone);
+    const events = await listEventsInTimeRange(timeMin, timeMax, 100);
+    for (const ev of events) {
+      if (!ev.id || seen.has(ev.id)) continue;
+      if (deletedIds.length >= MAX_BULK_DELETE) {
+        notes.push(`Kustutamise ülempiir (${MAX_BULK_DELETE}) saavutatud — järgmised jäid vahele.`);
+        return { deleted: deletedIds.length, deletedIds, notes };
+      }
+      await deleteCalendarEventById(ev.id);
+      seen.add(ev.id);
+      deletedIds.push(ev.id);
+    }
+  }
+
+  return { deleted: deletedIds.length, deletedIds, notes };
+}
+
+export type PatchCalendarEventFields = {
+  title?: string;
+  location?: string;
+  /** ISO dateTime või kogu päeva puhul YYYY-MM-DD */
+  start?: string;
+  end?: string;
+};
+
+export async function patchCalendarEventById(eventId: string, input: PatchCalendarEventFields): Promise<CalendarEventItem> {
+  const auth = await createAuthorizedClient();
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const existing = await calendar.events.get({
+    calendarId: 'primary',
+    eventId,
+  });
+
+  const data = existing.data;
+  const requestBody: calendar_v3.Schema$Event = {};
+
+  if (input.title !== undefined) {
+    requestBody.summary = input.title;
+  }
+  if (input.location !== undefined) {
+    requestBody.location = input.location;
+  }
+
+  if (input.start !== undefined && input.end !== undefined) {
+    const allDay = Boolean(data.start?.date && !data.start?.dateTime);
+    if (allDay) {
+      requestBody.start = { date: input.start.slice(0, 10) };
+      requestBody.end = { date: input.end.slice(0, 10) };
+    } else {
+      requestBody.start = {
+        dateTime: input.start,
+        timeZone: DEFAULT_CALENDAR_TIMEZONE,
+      };
+      requestBody.end = {
+        dateTime: input.end,
+        timeZone: DEFAULT_CALENDAR_TIMEZONE,
+      };
+    }
+  } else if (input.start !== undefined || input.end !== undefined) {
+    throw new Error('Kalendrisündmuse muutmiseks vaja nii algus kui lõpp korraga.');
+  }
+
+  const result = await calendar.events.patch({
+    calendarId: 'primary',
+    eventId,
+    requestBody,
+  });
+
+  const event = result.data;
+  return mapGoogleEvent(event);
+}
+
+/** Kas ajavahemikku [start,end] kattuvad olemasolevad sündmused (primary)? */
+export async function listEventsOverlappingRange(
+  startIso: string,
+  endIso: string,
+): Promise<CalendarEventItem[]> {
+  const startMs = new Date(startIso).getTime();
+  const endMs = new Date(endIso).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    throw new Error('Vigane ajavahemik overlap kontrolliks.');
+  }
+
+  const padMs = 60 * 1000;
+  const timeMin = new Date(startMs - padMs).toISOString();
+  const timeMax = new Date(endMs + padMs).toISOString();
+
+  const candidates = await listEventsInTimeRange(timeMin, timeMax, 80);
+
+  return candidates.filter((ev) => {
+    const es = new Date(ev.start).getTime();
+    const ee = new Date(ev.end).getTime();
+    if (!Number.isFinite(es) || !Number.isFinite(ee)) {
+      return false;
+    }
+    return es < endMs && ee > startMs;
+  });
 }
 
 export async function listTodayEvents(maxResults = 50): Promise<CalendarEventItem[]> {
@@ -72,12 +237,7 @@ export async function listTodayEvents(maxResults = 50): Promise<CalendarEventIte
 
   const events = result.data.items ?? [];
 
-  return events.map((event) => ({
-    id: event.id ?? '',
-    summary: event.summary ?? '(no title)',
-    start: event.start?.dateTime || event.start?.date || '',
-    end: event.end?.dateTime || event.end?.date || '',
-  }));
+  return events.map((event) => mapGoogleEvent(event));
 }
 
 export async function createCalendarEvent(input: CreateCalendarEventInput) {
@@ -93,9 +253,11 @@ export async function createCalendarEvent(input: CreateCalendarEventInput) {
       location: input.location || undefined,
       start: {
         dateTime: input.start,
+        timeZone: DEFAULT_CALENDAR_TIMEZONE,
       },
       end: {
         dateTime: input.end,
+        timeZone: DEFAULT_CALENDAR_TIMEZONE,
       },
     },
   });
