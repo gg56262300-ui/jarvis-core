@@ -212,10 +212,10 @@
 
     .reply-confirm-row {
       display: flex;
+      flex-direction: column;
       width: 100%;
-      align-items: center;
+      align-items: stretch;
       gap: 8px;
-      flex-wrap: wrap;
       padding: 6px 4px 2px;
     }
 
@@ -252,6 +252,25 @@
       background: #475569;
       color: #f1f5f9;
       border-color: #64748b;
+    }
+
+    .reply-confirm-btn.alt {
+      background: #1a1530;
+      color: #ddd6fe;
+      border-color: #6c63ff;
+    }
+
+    .reply-confirm-btn.alt:hover {
+      background: #252040;
+    }
+
+    .reply-confirm-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
     }
 
     .footer-input-row {
@@ -542,9 +561,12 @@
       <button class="confirm-btn no" id="confirmNo">EI</button>
     </div>
     <div id="replyConfirmRow" class="reply-confirm-row" hidden>
-      <span class="reply-confirm-label">Vasta</span>
-      <button type="button" class="reply-confirm-btn yes" id="replyConfirmYes">Jah</button>
-      <button type="button" class="reply-confirm-btn no" id="replyConfirmNo">Ei</button>
+      <span class="reply-confirm-label" id="replyConfirmLabel">Ohtlik tegevus</span>
+      <div class="reply-confirm-btns">
+        <button type="button" class="reply-confirm-btn yes" id="replyConfirmYes">Jah</button>
+        <button type="button" class="reply-confirm-btn alt" id="replyConfirmAlt">Täpsusta</button>
+        <button type="button" class="reply-confirm-btn no" id="replyConfirmNo">Ei</button>
+      </div>
     </div>
     <div id="voiceLiveRow" class="voice-live-row">
       <span class="voice-live-label" id="voiceLiveLabel">Hääl:</span>
@@ -613,7 +635,9 @@
     let calAlarmSoundTimer = null;
 
     const replyConfirmRowEl = document.getElementById('replyConfirmRow');
+    const replyConfirmLabelEl = document.getElementById('replyConfirmLabel');
     const replyConfirmYesEl = document.getElementById('replyConfirmYes');
+    const replyConfirmAltEl = document.getElementById('replyConfirmAlt');
     const replyConfirmNoEl = document.getElementById('replyConfirmNo');
     const voiceBtnEl = document.getElementById('voiceBtn');
     const voiceLiveEl = document.getElementById('voiceLive');
@@ -702,28 +726,51 @@
       document.body.classList.remove('chat-reply-confirm-active');
     }
 
-    function assistantMessageSuggestsConfirmation(text) {
+    /**
+     * Jah/Ei riba ainult ohtlike / tagasipöörmatute tegevuste puhul (masskustutus, terve päev jne).
+     * Lihtne lisamine / meeldetuletus ei tohiks siia sattuda.
+     */
+    function assistantMessageRequiresDestructiveConfirm(text) {
       const raw = (text || '').trim();
-      if (raw.length < 14) return false;
-      if (!/\?\s*$/.test(raw)) return false;
+      if (raw.length < 28) return false;
       const lower = raw.toLowerCase();
+
       if (
-        /kas soovid|kas kinnitad|kas ma pean|eemaldaksin|kustutada|kustutan|soovid, et/i.test(lower)
+        /meeldetulet(us|use)|lisa(da)?\s+kalendrisse|uus\s+sündmus|üks(iks)?\s+sündmus/i.test(lower) &&
+        !/(kustut|eemald|tühj|kõik\s+(need\s+)?sündmused|terve\s+päev)/i.test(lower)
       ) {
-        return true;
+        return false;
       }
-      if (/хотите|удалить|подтверж|убрать|очистить|удаляю/i.test(raw)) return true;
-      if (/(do you want|should i remove|confirm|delete these)/i.test(lower)) return true;
-      return false;
+
+      const risky =
+        /kustut(a|aksin|ada|an)?\b.*\b(kõik|terve|päeva|päeval|mitu|kuupäev)/i.test(lower) ||
+        /eemald(a|aksin)?\b.*\b(kõik|kõik\s+need|terve)/i.test(lower) ||
+        /\b(kõik|terve)\s+(need\s+)?sündmused\b/i.test(lower) ||
+        /tühjenda.*kalend|kalendri?\s+tühj/i.test(lower) ||
+        /massi(kustutus|iline)?|korraga\s+kõik/i.test(lower) ||
+        /\b(delete|bulk)\b.*\b(all|day|events)/i.test(lower) ||
+        /удалить\s+(все|всё)|очистить\s+календар|все\s+события/i.test(raw);
+
+      if (!risky) return false;
+
+      const asks =
+        /\?\s*$/.test(raw) ||
+        /\bkas\s+(soovid|kinnitad|tohin|võin|tõesti)\b/i.test(lower) ||
+        /хотите|подтверж/i.test(raw);
+
+      return asks;
     }
 
     function showReplyConfirmIfNeeded(assistantText) {
       if (!replyConfirmRowEl) return;
-      if (!assistantMessageSuggestsConfirmation(assistantText)) {
+      if (!assistantMessageRequiresDestructiveConfirm(assistantText)) {
         hideReplyConfirm();
         return;
       }
       replyConfirmRowEl.hidden = false;
+      if (replyConfirmLabelEl) {
+        replyConfirmLabelEl.textContent = 'Ohtlik tegevus — kinnita või täpsusta';
+      }
       document.body.classList.add('chat-reply-confirm-active');
       if (soundEnabled) playBeep();
     }
@@ -1172,6 +1219,7 @@
 
     async function send() {
       hideReplyConfirm();
+      inputEl.placeholder = 'Kirjuta siia...';
       const text = inputEl.value.trim();
       if (!text) return;
 
@@ -1241,7 +1289,7 @@
     if (replyConfirmYesEl) {
       replyConfirmYesEl.addEventListener('click', () => {
         inputEl.value =
-          'Jah — palun kinnita ja tee see tegevus täielikult (kasuta vajadusel kalendri tööriistu delete_calendar_events või event_ids).';
+          'Jah — kinnitan: vii see kustutamine või muudatus lõpuni täpselt nii, nagu ülal küsisid (kasuta kalendri tööriistu vastavalt kontekstile).';
         send();
       });
     }
@@ -1249,6 +1297,18 @@
       replyConfirmNoEl.addEventListener('click', () => {
         inputEl.value = 'Ei, ära tee seda tegevust.';
         send();
+      });
+    }
+
+    if (replyConfirmAltEl) {
+      replyConfirmAltEl.addEventListener('click', () => {
+        inputEl.placeholder = 'Kirjuta teine või täpsem soov; võid kasutada häälnuppu…';
+        inputEl.focus();
+        try {
+          inputEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch {
+          /* ignore */
+        }
       });
     }
 
