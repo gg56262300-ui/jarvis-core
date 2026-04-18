@@ -285,12 +285,52 @@
 
     .voice-btn.listening {
       border-color: #ef4444;
-      background: rgba(239, 68, 68, 0.2);
-      animation: voicePulse 1s ease-in-out infinite;
+      background: rgba(239, 68, 68, 0.22);
     }
 
-    @keyframes voicePulse {
-      50% { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35); }
+    .voice-actions-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .voice-clear-btn {
+      width: 36px;
+      height: 32px;
+      border-radius: 10px;
+      border: 1px solid #2a2d3a;
+      background: #0f1117;
+      color: #94a3b8;
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .voice-clear-btn:hover {
+      border-color: #64748b;
+      color: #e8e8e8;
+    }
+
+    .voice-live-row {
+      display: none;
+      width: 100%;
+      font-size: 13px;
+      line-height: 1.35;
+      color: #94a3b8;
+      padding: 4px 2px 0;
+      min-height: 1.2em;
+    }
+
+    .voice-live-row.is-on {
+      display: block;
+    }
+
+    .voice-live-text {
+      color: #cbd5e1;
+      word-break: break-word;
     }
 
     body.chat-reply-confirm-active #input {
@@ -493,8 +533,23 @@
       <button type="button" class="reply-confirm-btn yes" id="replyConfirmYes">Jah</button>
       <button type="button" class="reply-confirm-btn no" id="replyConfirmNo">Ei</button>
     </div>
+    <div id="voiceLiveRow" class="voice-live-row">
+      <span class="voice-live-label" id="voiceLiveLabel">Hääl:</span>
+      <span id="voiceLive" class="voice-live-text"></span>
+    </div>
     <div class="footer-input-row">
-      <button type="button" class="voice-btn" id="voiceBtn" title="Häälkäsk. Pikk vajutus = vaheta et/ru.">🎤</button>
+      <div class="voice-actions-col">
+        <button
+          type="button"
+          class="voice-btn"
+          id="voiceBtn"
+          aria-pressed="false"
+          title="Esimene puudutus = kuula; teine = peata. Pikk vajutus = keel et/ru."
+        >
+          🎤
+        </button>
+        <button type="button" class="voice-clear-btn" id="voiceClearBtn" title="Tühjenda tekstiväli">✕</button>
+      </div>
       <textarea id="input" rows="1" placeholder="Kirjuta siia..."></textarea>
       <button id="send" type="button">
         <svg width="18" height="18" viewBox="0 0 24 24">
@@ -548,9 +603,86 @@
     const replyConfirmYesEl = document.getElementById('replyConfirmYes');
     const replyConfirmNoEl = document.getElementById('replyConfirmNo');
     const voiceBtnEl = document.getElementById('voiceBtn');
+    const voiceLiveEl = document.getElementById('voiceLive');
+    const voiceLiveRowEl = document.getElementById('voiceLiveRow');
+    const voiceLiveLabelEl = document.getElementById('voiceLiveLabel');
+    const voiceClearBtnEl = document.getElementById('voiceClearBtn');
     let speechLang = localStorage.getItem('jarvisSpeechLang') || 'et-EE';
     let speechRecognition = null;
     let suppressVoiceClick = false;
+    let voiceMaxTimer = null;
+    let voiceUiActive = false;
+
+    function setVoiceLiveRowOn(on) {
+      if (voiceLiveRowEl) voiceLiveRowEl.classList.toggle('is-on', on);
+    }
+
+    function finishVoiceUi() {
+      voiceUiActive = false;
+      if (voiceMaxTimer) {
+        clearTimeout(voiceMaxTimer);
+        voiceMaxTimer = null;
+      }
+      if (voiceBtnEl) {
+        voiceBtnEl.classList.remove('listening');
+        voiceBtnEl.setAttribute('aria-pressed', 'false');
+        voiceBtnEl.textContent = '🎤';
+      }
+      if (voiceLiveEl) voiceLiveEl.textContent = '';
+      if (voiceLiveLabelEl) voiceLiveLabelEl.textContent = 'Hääl:';
+      setVoiceLiveRowOn(false);
+    }
+
+    function forceStopVoice() {
+      if (!speechRecognition) {
+        finishVoiceUi();
+        return;
+      }
+      try {
+        speechRecognition.stop();
+      } catch {
+        try {
+          speechRecognition.abort();
+        } catch {
+          finishVoiceUi();
+        }
+      }
+    }
+
+    function startVoiceSession() {
+      if (!speechRecognition) {
+        speechRecognition = initSpeechRecognition();
+      }
+      if (!speechRecognition) {
+        addMsg(
+          'assistant',
+          'Häältuvastus ei ole selles brauseris toetatud (Chrome Android / Chrome töölaud).',
+        );
+        return;
+      }
+      if (voiceUiActive) return;
+      try {
+        speechRecognition.lang = speechLang;
+        voiceUiActive = true;
+        if (voiceBtnEl) {
+          voiceBtnEl.classList.add('listening');
+          voiceBtnEl.setAttribute('aria-pressed', 'true');
+          voiceBtnEl.textContent = '⏹';
+        }
+        if (voiceLiveLabelEl) voiceLiveLabelEl.textContent = 'Kuulan…';
+        if (voiceLiveEl) voiceLiveEl.textContent = '';
+        setVoiceLiveRowOn(true);
+        speechRecognition.start();
+        voiceMaxTimer = setTimeout(() => {
+          forceStopVoice();
+          addMsg('assistant', 'Hääl peatatud automaatselt (45 s). Vajuta 🎤 uuesti, kui vaja.');
+        }, 45000);
+      } catch {
+        finishVoiceUi();
+        speechRecognition = initSpeechRecognition();
+        addMsg('assistant', 'Mikrofoni ei saanud käivitada — kontrolli brauseri luba ja proovi uuesti.');
+      }
+    }
 
     function hideReplyConfirm() {
       if (replyConfirmRowEl) replyConfirmRowEl.hidden = true;
@@ -587,22 +719,46 @@
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) return null;
       const r = new SR();
-      r.continuous = false;
-      r.interimResults = false;
+      r.continuous = true;
+      r.interimResults = true;
       r.maxAlternatives = 1;
-      r.onresult = (ev) => {
-        const t = ev.results[0]?.[0]?.transcript?.trim();
-        if (t) {
-          inputEl.value = (inputEl.value ? `${inputEl.value} ` : '') + t;
-          inputEl.dispatchEvent(new Event('input'));
+      r.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const chunk = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            const t = chunk.trim();
+            if (t) {
+              inputEl.value = (inputEl.value ? `${inputEl.value.trim()} ` : '') + t;
+              inputEl.dispatchEvent(new Event('input'));
+            }
+          } else {
+            interim += chunk;
+          }
         }
-        if (voiceBtnEl) voiceBtnEl.classList.remove('listening');
+        if (voiceLiveEl) voiceLiveEl.textContent = interim;
+        if (voiceLiveLabelEl) {
+          voiceLiveLabelEl.textContent = interim.trim() ? 'Pooleli (eelvaade):' : 'Kuulan…';
+        }
+        setVoiceLiveRowOn(voiceUiActive);
       };
-      r.onerror = () => {
-        if (voiceBtnEl) voiceBtnEl.classList.remove('listening');
+      r.onerror = (ev) => {
+        const err = ev.error || '';
+        if (err === 'aborted') {
+          finishVoiceUi();
+          return;
+        }
+        finishVoiceUi();
+        if (err !== 'no-speech' && err !== 'audio-capture') {
+          addMsg('assistant', `Häältuvastus peatatud (${err}). Kirjuta käsitsi või proovi uuesti.`);
+        }
       };
       r.onend = () => {
-        if (voiceBtnEl) voiceBtnEl.classList.remove('listening');
+        finishVoiceUi();
+        const next = initSpeechRecognition();
+        if (next) {
+          speechRecognition = next;
+        }
       };
       return r;
     }
@@ -652,6 +808,10 @@
       sendBtn.disabled = on;
       inputEl.disabled = on;
       if (voiceBtnEl) voiceBtnEl.disabled = on;
+      if (voiceClearBtnEl) voiceClearBtnEl.disabled = on;
+      if (on && voiceUiActive) {
+        forceStopVoice();
+      }
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
@@ -1079,6 +1239,15 @@
       });
     }
 
+    if (voiceClearBtnEl) {
+      voiceClearBtnEl.addEventListener('click', () => {
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+        inputEl.dispatchEvent(new Event('input'));
+        inputEl.focus();
+      });
+    }
+
     if (voiceBtnEl) {
       let voiceLongTimer = null;
       const clearVoiceLong = () => {
@@ -1088,6 +1257,7 @@
         }
       };
       voiceBtnEl.addEventListener('touchstart', () => {
+        if (voiceUiActive) return;
         clearVoiceLong();
         voiceLongTimer = setTimeout(() => {
           voiceLongTimer = null;
@@ -1105,32 +1275,16 @@
       voiceBtnEl.addEventListener('touchcancel', clearVoiceLong);
       voiceBtnEl.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        cycleSpeechLang();
+        if (!voiceUiActive) cycleSpeechLang();
       });
       voiceBtnEl.addEventListener('click', () => {
         if (suppressVoiceClick) return;
         if (voiceBtnEl.disabled) return;
-        if (!speechRecognition) {
-          addMsg(
-            'assistant',
-            'Häältuvastus ei ole selles brauseris toetatud (Chrome Android / Chrome töölaud töötab kõige paremini).',
-          );
+        if (voiceUiActive) {
+          forceStopVoice();
           return;
         }
-        if (voiceBtnEl.classList.contains('listening')) {
-          try {
-            speechRecognition.stop();
-          } catch {}
-          return;
-        }
-        try {
-          speechRecognition.lang = speechLang;
-          voiceBtnEl.classList.add('listening');
-          speechRecognition.start();
-        } catch {
-          voiceBtnEl.classList.remove('listening');
-          addMsg('assistant', 'Mikrofoni ei saanud käivitada — kontrolli brauseri luba.');
-        }
+        startVoiceSession();
       });
     }
 
