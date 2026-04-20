@@ -18,6 +18,7 @@ import { appendAgentInboxEntry } from '../agent-inbox/agent-inbox.service.js';
 import { CalculatorService } from '../calculator/calculator.service.js';
 import { appendChatChannelMessage } from './channel.controller.js';
 import { sendTelegramMessage } from '../integrations/telegram/telegram.client.js';
+import { createJarvisOpenAI } from '../shared/openai/jarvis-openai-client.js';
 import { logger } from '../shared/logger/logger.js';
 import { DateTime } from 'luxon';
 
@@ -1263,7 +1264,7 @@ function chatFailureMessageForClient(err: unknown): string {
   }
   if (err instanceof APIError) {
     if (err.status === 401 || err.status === 403) {
-      return 'Teenuse autentimise viga serveris (OpenAI võti).';
+      return 'Teenuse autentimise viga serveris (OpenAI võti või vale OPENAI_ORG_ID / OPENAI_PROJECT_ID). Kontrolli .env ja OpenAI dashboard; pärast muutmist pm2 restart jarvis --update-env.';
     }
     if (err.status === 429) {
       return 'Liiga palju päringuid — oota hetke ja proovi uuesti.';
@@ -1316,18 +1317,13 @@ export async function handleChat(req: Request, res: Response) {
     return;
   }
 
-  const apiKey = env.OPENAI_API_KEY?.trim();
-  if (!apiKey) {
+  if (!env.OPENAI_API_KEY) {
     const m = 'OpenAI API võti puudub serveris.';
     res.status(503).json({ error: m, message: m });
     return;
   }
 
-  const openai = new OpenAI({
-    apiKey,
-    timeout: 120_000,
-    maxRetries: 2,
-  });
+  const openai = createJarvisOpenAI();
 
   if (clientTodayYmd) {
     const serverDay = DateTime.now().setZone(activeZone).toISODate();

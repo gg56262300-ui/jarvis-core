@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node --import ./dist/instrument.js dist/index.js",
+    "start": "node --env-file=.env --import ./dist/instrument.js dist/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:gmail-voice": "sh ./scripts/test-gmail-voice.sh",
     "test:gmail-v2": "sh ./scripts/test-gmail-v2.sh",
@@ -76,7 +76,7 @@
     "verify:make-layer": "npm run build && npm run lint",
     "gate:voice": "vitest run tests/voice-routing.test.ts",
     "gate:full": "npm run build && npm run lint && npm run gate:voice && node scripts/full-chain-gate.mjs",
-    "gate:fast": "npm run build && npm run lint && npm run gate:voice && npm run test:calendar-crud && npm run test:reminder-routing && npm run test:reminder-parser",
+    "gate:fast": "npm run build && npm run lint && npm run gate:voice && npm run test:calendar-crud && npm run test:reminder-routing && npm run test:reminder-parser && npm run test:make-webhook",
     "test:calendar-crud": "vitest run tests/calendar-crud.test.ts",
     "test:playwright-calendar": "playwright test playwright-tests/calendar-next.spec.ts",
     "test:playwright-make-smoke": "playwright test playwright-tests/make-scenario-smoke.spec.ts",
@@ -91,6 +91,7 @@
     "watch:make-branch-a-slice3": "node --env-file=.env ./node_modules/.bin/playwright test playwright-tests/make-branch-a-build.spec.ts --headed --grep \"slice 3\"",
     "test:reminder-routing": "vitest run tests/reminder-routing.test.ts",
     "test:reminder-parser": "vitest run tests/reminder-parser.test.ts",
+    "test:make-webhook": "vitest run tests/make-webhook-classify.test.ts",
     "state:restart-smoke": "node scripts/restart-and-smoke.mjs",
     "gate:stable": "npm run gate:fast && npm run state:restart-smoke",
     "brigadir": "node scripts/brigadir.mjs",
@@ -100,6 +101,7 @@
     "projektijuht": "node scripts/projektijuht.mjs",
     "check:calendar-local": "./scripts/calendar-self-check.sh",
     "check:make-health": "./scripts/make-health-check.sh",
+    "check:openai-auth": "node --env-file=.env ./node_modules/.bin/tsx scripts/openai-auth-check.ts",
     "n8n:jarvis": "node scripts/n8n-jarvis-webhook.mjs",
     "check:jarvis-health": "./scripts/jarvis-health-auto.sh",
     "check:mac-load": "./scripts/mac-load-auto.sh"

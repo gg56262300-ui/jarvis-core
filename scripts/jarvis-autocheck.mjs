@@ -1,5 +1,6 @@
 /* global AbortSignal */
 import { spawn } from 'node:child_process';
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
@@ -10,6 +11,20 @@ import { setTimeout as delay } from 'node:timers/promises';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
+
+function hydrateOpenAiKeyFromFile() {
+  const keyFile = (process.env.OPENAI_API_KEY_FILE || '').trim();
+  if (!keyFile) return;
+  try {
+    const abs = path.isAbsolute(keyFile) ? keyFile : path.resolve(projectRoot, keyFile);
+    const raw = fsSync.readFileSync(abs, 'utf8').trim().replace(/^\uFEFF/, '');
+    if (!raw) return;
+    const existing = (process.env.OPENAI_API_KEY || '').trim();
+    if (!existing) process.env.OPENAI_API_KEY = raw;
+  } catch {
+    /* ignore */
+  }
+}
 
 const HEALTH_URL = process.env.JARVIS_HEALTH_URL?.trim() || 'http://127.0.0.1:3000/health';
 const PUBLIC_BASE = (process.env.JARVIS_PUBLIC_BASE?.trim() || 'https://jarvis-kait.us').replace(/\/$/, '');
@@ -110,6 +125,43 @@ async function healthCheck() {
   }
 }
 
+async function openaiAuthCheck() {
+  const key = (process.env.OPENAI_API_KEY || '').trim().replace(/^\uFEFF/, '');
+  if (!key) {
+    return { ok: false, reason: 'MISSING_KEY', durationMs: 0, label: 'openai' };
+  }
+  const start = Date.now();
+  try {
+    const { default: OpenAI } = await import('openai');
+    const orgRaw = (process.env.OPENAI_ORG_ID || '').trim().replace(/^\uFEFF/, '');
+    const projectRaw = (process.env.OPENAI_PROJECT_ID || '').trim().replace(/^\uFEFF/, '');
+    const baseURLRaw = (process.env.OPENAI_BASE_URL || '').trim().replace(/^\uFEFF/, '');
+    const organization = orgRaw.length > 0 ? orgRaw : null;
+    const project = projectRaw.length > 0 ? projectRaw : null;
+    const baseURL = baseURLRaw.length > 0 ? baseURLRaw : undefined;
+    const client = new OpenAI({
+      apiKey: key,
+      organization,
+      project,
+      ...(baseURL ? { baseURL } : {}),
+      maxRetries: 0,
+      timeout: 15_000,
+    });
+    await client.models.list({ limit: 1 });
+    const durationMs = Date.now() - start;
+    return { ok: true, durationMs, label: 'openai' };
+  } catch (err) {
+    const durationMs = Date.now() - start;
+    return {
+      ok: false,
+      durationMs,
+      reason: 'OPENAI_CALL_FAILED',
+      error: String(err).slice(0, 220),
+      label: 'openai',
+    };
+  }
+}
+
 async function channelPollCheck(url, label) {
   const start = Date.now();
   try {
@@ -137,8 +189,9 @@ async function runAllChecks() {
   const health = await healthCheck();
   const channelLocal = await channelPollCheck(CHANNEL_LOCAL_URL, 'channelLocal');
   const channelPublic = await channelPollCheck(CHANNEL_PUBLIC_URL, 'channelPublic');
-  const overallOk = Boolean(health.ok && channelLocal.ok && channelPublic.ok);
-  return { health, channelLocal, channelPublic, overallOk };
+  const openai = await openaiAuthCheck();
+  const overallOk = Boolean(health.ok && channelLocal.ok && channelPublic.ok && openai.ok);
+  return { health, channelLocal, channelPublic, openai, overallOk };
 }
 
 function summarizeFailure(checks) {
@@ -146,6 +199,7 @@ function summarizeFailure(checks) {
   if (!checks.health.ok) parts.push('health');
   if (!checks.channelLocal.ok) parts.push('kanal(kohalik)');
   if (!checks.channelPublic.ok) parts.push('kanal(avalik/tunnel)');
+  if (checks.openai && !checks.openai.ok) parts.push('openai(autentimine)');
   return parts.length ? parts.join(', ') : '';
 }
 
@@ -166,6 +220,9 @@ async function tryRemediate(state, checks) {
   const h = checks.health.ok;
   const cl = checks.channelLocal.ok;
   const cp = checks.channelPublic.ok;
+  if (h && cl && cp && checks.openai && !checks.openai.ok) {
+    return { ran: false, reason: 'openai_needs_env_fix' };
+  }
 
   if (!h || !cl) {
     const ok = await pm2Restart('jarvis');
@@ -179,6 +236,7 @@ async function tryRemediate(state, checks) {
 }
 
 async function main() {
+  hydrateOpenAiKeyFromFile();
   let state = (await readJson(STATE_PATH)) || { lastOk: null, lastNotifiedAt: null };
   let checks = await runAllChecks();
   let remediate = { ran: false };
@@ -216,6 +274,12 @@ async function main() {
         durationMs: checks.channelPublic.durationMs,
         error: checks.channelPublic.error || null,
       },
+      openai: {
+        ok: checks.openai.ok,
+        durationMs: checks.openai.durationMs,
+        reason: checks.openai.reason || null,
+        error: checks.openai.error || null,
+      },
     },
     lastRemediateAt: state.lastRemediateAt || null,
     lastRemediateAction: remediate.ran ? remediate.action : state.lastRemediateAction || null,
@@ -226,7 +290,7 @@ async function main() {
   const failSummary = summarizeFailure(checks);
 
   console.log(
-    `[${nowIso()}] overall ${overallOk ? 'OK' : 'FAIL'} health=${checks.health.ok ? 'OK' : 'FAIL'} chL=${checks.channelLocal.ok ? 'OK' : 'FAIL'} chPub=${checks.channelPublic.ok ? 'OK' : 'FAIL'} muutus=${changed}${remediate.ran ? ` remediate=${remediate.action}` : ''}`,
+    `[${nowIso()}] overall ${overallOk ? 'OK' : 'FAIL'} health=${checks.health.ok ? 'OK' : 'FAIL'} chL=${checks.channelLocal.ok ? 'OK' : 'FAIL'} chPub=${checks.channelPublic.ok ? 'OK' : 'FAIL'} openai=${checks.openai.ok ? 'OK' : 'FAIL'} muutus=${changed}${remediate.ran ? ` remediate=${remediate.action}` : ''}`,
   );
 
   if (!changed) {
@@ -236,14 +300,19 @@ async function main() {
 
   const title = overallOk ? 'Jarvis OK' : 'Jarvis PROBLEM';
   const pushBody = overallOk
-    ? 'Taastus (sh kanal).'
+    ? 'Taastus (sh kanal + OpenAI).'
     : failSummary
       ? `FAIL: ${failSummary}.`
       : 'FAIL.';
 
+  const openaiHint =
+    checks.openai && !checks.openai.ok
+      ? ` OpenAI: ${checks.openai.reason || 'FAIL'}${checks.openai.error ? ` — ${checks.openai.error}` : ''}. Paranda .env (OPENAI_API_KEY jms), siis pm2 restart jarvis --update-env.`
+      : '';
+
   const telegramBody = overallOk
-    ? `Taastus. health + chat-kanal OK (kohalik + avalik tunnel).`
-    : `FAIL: ${failSummary || 'tundmatu'}. health HTTP ${checks.health.status || 0}, chL HTTP ${checks.channelLocal.status || 0}, chPub HTTP ${checks.channelPublic.status || 0}. ${remediate.ran ? `Remediate: ${remediate.action} (exit ${remediate.ok ? 'OK' : 'FAIL'}). ` : ''}`.trim();
+    ? `Taastus. health + kanal + OpenAI OK (kohalik + avalik tunnel).`
+    : `FAIL: ${failSummary || 'tundmatu'}. health HTTP ${checks.health.status || 0}, chL HTTP ${checks.channelLocal.status || 0}, chPub HTTP ${checks.channelPublic.status || 0}.${openaiHint} ${remediate.ran ? `Remediate: ${remediate.action} (exit ${remediate.ok ? 'OK' : 'FAIL'}). ` : ''}`.trim();
 
   const telegram = await sendTelegram(
     `<b>${title}</b>\n${telegramBody}\n\nNext: npm run channel:check — pm2 logs cloudflared --lines 40 --nostream`,

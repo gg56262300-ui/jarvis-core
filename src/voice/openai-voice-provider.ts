@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 
 import { env } from '../config/env.js';
+import { createJarvisOpenAI } from '../shared/openai/jarvis-openai-client.js';
 import { logger } from '../shared/logger/logger.js';
 import { VOICE_SYSTEM_PROMPT } from './prompts/voice-system.prompt.js';
 import type { VoiceTurnInput, VoiceTurnResult } from './voice.types.js';
@@ -13,9 +14,7 @@ export class OpenAiVoiceAssistantProvider {
       throw new Error('OPENAI_API_KEY puudub .env failist');
     }
 
-    this.client = new OpenAI({
-      apiKey: env.OPENAI_API_KEY,
-    });
+    this.client = createJarvisOpenAI();
   }
 
   async respond(input: VoiceTurnInput): Promise<VoiceTurnResult> {

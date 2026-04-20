@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://jarvis.local/spec/make-jarvis-webhook.payload.schema.json",
+  "title": "Jarvis → Make webhook JSON body",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["source", "event"],
+  "properties": {
+    "source": {
+      "type": "string",
+      "const": "jarvis",
+      "description": "Always lowercase jarvis per MAKE_CONTRACT.md"
+    },
+    "event": {
+      "type": "string",
+      "enum": ["reminder.set", "calendar.create", "calendar.query"],
+      "description": "Canonical event names; keep in sync with src/integrations/make/make-events.ts"
+    },
+    "text": {
+      "type": "string",
+      "description": "Optional; meaning depends on event (see MAKE_CONTRACT.md)"
+    }
+  }
+}

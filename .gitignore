@@ -8,6 +8,7 @@ coverage
 credentials.json
 credentials.backup.json
 data/make-webhook-failed.jsonl
+data/openai-api-key.txt
 
 data/google-gmail-token.json
 data/google-calendar-token.json

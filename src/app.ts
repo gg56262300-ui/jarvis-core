@@ -27,9 +27,21 @@ import { errorHandler } from './shared/errors/error-handler.js';
 import { notFoundHandler } from './shared/errors/not-found-handler.js';
 import { createHealthRouter } from './shared/http/health.router.js';
 import { registerGoogleOAuthLanding } from './shared/http/google-oauth-landing.js';
+import { env } from './config/index.js';
+import { logger } from './shared/logger/logger.js';
 
 export const buildApp = () => {
   databaseProvider.initialize();
+
+  logger.info(
+    {
+      openaiKey: Boolean(env.OPENAI_API_KEY),
+      openaiOrg: Boolean(env.OPENAI_ORG_ID),
+      openaiProject: Boolean(env.OPENAI_PROJECT_ID),
+      openaiCustomBaseUrl: Boolean(env.OPENAI_BASE_URL),
+    },
+    'OpenAI seadistuse ülevaade (saladusi ei logita)',
+  );
 
   const app = express();
   const publicDirectory = path.resolve(process.cwd(), 'public');

@@ -204,7 +204,7 @@ Terminali marker: iga käsuploki alguses prindi roheline marker printf '\033[1;4
 
 ## Kaido tööstiil (kohustuslik)
 
-- **Vastamise keel:** vasta **eesti keeles**. Kui omanik kirjutab teises keeles (nt vene või inglise), see **ei muuda** seda reeglit — juhised, selgitused ja töövastused jäävad **eesti keelde**. Erand ainult siis, kui omanik palub **selgelt** vastata teises keeles.
+- **Vastamise keel (alati):** vasta **ainult eesti keeles** — juhised, selgitused ja töövastused **alati** eesti keeles, **mitte kunagi** teisiti omaniku sõnumi keele järgi (vene, inglise jne ei muuda seda). **Ainus** lubatud erand: omanik palub **sõnaselgelt** vastata teises keeles; ilma sellise palvetamata teisi keeli ei kasuta.
 - **Agendi roll:** väikeseid ja ohutuid samme (repo failid, valmis käsud, dokumentatsioon) tee **ise**; küsi omanikult ainult siis, kui on **saladus**, **selge oht** või **omaniku valik** (nt serveri aadress, parool).
 - Anna alati 1 samm korraga: üks käsk → oota tulemus → järgmine käsk.
 - Ära anna käsuplokkides kommentaare (`#`) ega küsimärke; ainult puhtad käsud.

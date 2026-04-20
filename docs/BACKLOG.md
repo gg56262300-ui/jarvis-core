@@ -20,12 +20,14 @@
 
 ## LATER
 
-- **PWA:** `manifest`, ikoonid, vahemälu / uue `chat.html` jõudmine mobiilile (kasutaja tagasiside järgi).
+- **PWA:** vahemälu / uue `chat.html` jõudmine mobiilile, peened täiendused (manifest + PNG ikoonid juba repos).
 - **`public/chat.html`:** üksikute nuppude / keelelüliti peened täiendused pärast kasutajapoolset testimist.
 - **Lennud / mitu ajavööndit:** Roberti prompt juba mainib — vajadusel eraldi kasutuslood + täpsustused.
 
 ## DONE
 
+- **PWA (Android installitavus):** `public/icons/icon-192.png`, `icon-512.png` + `manifest.webmanifest` PNG kirjed (vt LATER real „manifest/ikoonid” osaliselt kaetud).
+- **Make kiht:** `classifyMakeFailure` + `JARVIS_MAKE_EVENTS` unit testid (`npm run test:make-webhook`, osa `gate:fast`); masinloetav skeem `spec/make-jarvis-webhook.payload.schema.json`.
 - Omaniku kinnitatud **tööjärjekorra** kirjetus (KINNITAN järjekord, 2026-04-19)
 - `npm run smoke` chat päring sisaldab `clientTimeZone` + `clientLocalCalendarDate` (regressioonitest)
 - Google OAuth: Gmail + Calendar + Contacts (`/oauth2/google`, `npm run google:oauth:*`)
