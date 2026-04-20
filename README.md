@@ -13,6 +13,8 @@ Jarvis Core is the backend foundation for a personal AI automation assistant. Th
 
 ## Getting Started
 
+Node version is pinned in `.nvmrc`.
+
 ```bash
 npm install
 cp .env.example .env

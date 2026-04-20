@@ -38,8 +38,23 @@ Asenda `/TEE/JARVIS` oma tegeliku projektikaustaga (nt `~/jarvis-core`).
    npm run check:openai-auth
    ```
    - Peab lõppeda tekstiga **`OK: OpenAI autentimine...`**
-   - Kui **FAIL** → ava sama kaustas fail **`.env`** (nano, vim, või SFTP/FileZilla), veendu, et **`OPENAI_API_KEY`** on **täpselt sama kehtiv võti** mis töötab Macis. Salvesta.  
+   - Kui **FAIL** → paranda **serveri** `.env` nii, et `OPENAI_API_KEY` on **täpselt sama kehtiv võti** mis töötab Macis. Salvesta.
      Kui Macis on `OPENAI_ORG_ID` / `OPENAI_PROJECT_ID`, peavad need VPS-is samuti klappima või olema eemaldatud (vale org = 401).
+
+   **Kõige vähem “jama” viis (ilma nano paste muredeta):**
+
+   - **Sisesta võti ühte kohta (`KEY>`) ja kirjuta see .env-i automaatselt:**
+
+     ```bash
+     cd /TEE/JARVIS
+     printf 'KEY> '
+     read -r -s OPENAI_KEY; echo
+     export OPENAI_KEY
+     python3 -c "import os,re,pathlib; key=os.environ.get('OPENAI_KEY','').strip(); assert key,'EMPTY'; p=pathlib.Path('.env'); raw=p.read_text(errors='ignore') if p.exists() else ''; raw=re.sub(r'^OPENAI_API_KEY=.*$','OPENAI_API_KEY='+key,raw,flags=re.M); p.write_text((raw if raw.endswith('\n') else raw+'\n')); print('OK: env written')"
+     unset OPENAI_KEY
+     ```
+
+   - Seejärel käivita uuesti **`npm run check:openai-auth`** (peab olema OK) ja alles siis tee `pm2 restart jarvis --update-env`.
 
 7. **Taaskäivita rakendus (et `.env` tõesti laeks):**
    ```bash
@@ -49,6 +64,26 @@ Asenda `/TEE/JARVIS` oma tegeliku projektikaustaga (nt `~/jarvis-core`).
 8. **Telefonis:** ava Robert, saada **üks lühike sõnum** (mitte ainult `1+1`).  
    - **Korras:** tavaline vastus, **ei** ole teksti „varuvastus“ / „OpenAI võti“ märkust.  
    - **Mitte korras:** korda punkti **6** (võti ja org/projekt).
+
+---
+
+## Üks käsk (soovitus): `ops:one`
+
+Kui `jarvis-core` on uuem, saad sama asja teha ühe käsuga:
+
+```bash
+cd /TEE/JARVIS
+npm run ops:one
+```
+
+See teeb: `git pull --ff-only` → `npm ci` → `npm run build` → `npm run check:openai-auth` → kompaktne `channel:check` → `pm2 restart jarvis --update-env` (ja `cloudflared`, kui olemas) → kontroll uuesti.
+
+Kui repo on “dirty”, siis ta **keeldub** (et vältida pooliku töö deploy’d). Vajadusel override:
+
+```bash
+cd /TEE/JARVIS
+JARVIS_OPS_ONE_ALLOW_DIRTY=1 npm run ops:one
+```
 
 ---
 

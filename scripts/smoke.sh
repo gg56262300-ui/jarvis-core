@@ -2,6 +2,7 @@
 set -euo pipefail
 
 BASE_URL="http://localhost:3000"
+unset npm_config_devdir 2>/dev/null || true
 
 echo "===== BUILD ====="
 npm run build
@@ -50,6 +51,14 @@ curl --max-time 25 -s -X POST "$BASE_URL/api/chat" \
 echo
 echo "===== CRM LEADS ====="
 curl --max-time 8 -s "$BASE_URL/api/crm/leads" | python3 -m json.tool
+
+echo
+echo "===== SMOKE: COMMS (gmail + contacts) ====="
+JARVIS_BASE_URL="$BASE_URL" ./scripts/smoke-comms.sh
+
+echo
+echo "===== SMOKE: CRM + WHATSAPP ====="
+JARVIS_BASE_URL="$BASE_URL" ./scripts/smoke-crm-whatsapp.sh
 
 echo
 echo "===== GOOGLE (olek, ilma täisandmeteta) ====="

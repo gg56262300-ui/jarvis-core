@@ -29,8 +29,8 @@ function hydrateOpenAiKeyFromFile() {
 const HEALTH_URL = process.env.JARVIS_HEALTH_URL?.trim() || 'http://127.0.0.1:3000/health';
 const PUBLIC_BASE = (process.env.JARVIS_PUBLIC_BASE?.trim() || 'https://jarvis-kait.us').replace(/\/$/, '');
 const CHANNEL_LOCAL_URL =
-  process.env.JARVIS_CHANNEL_URL?.trim() || 'http://127.0.0.1:3000/api/chat/channel?after=0';
-const CHANNEL_PUBLIC_URL = `${PUBLIC_BASE}/api/chat/channel?after=0`;
+  process.env.JARVIS_CHANNEL_URL?.trim() || 'http://127.0.0.1:3000/api/chat/channel?after=0&limit=5';
+const CHANNEL_PUBLIC_URL = `${PUBLIC_BASE}/api/chat/channel?after=0&limit=5`;
 
 const LOG_DIR = path.resolve(projectRoot, 'logs');
 const STATE_PATH = path.join(LOG_DIR, 'autocheck-state.json');
@@ -152,11 +152,13 @@ async function openaiAuthCheck() {
     return { ok: true, durationMs, label: 'openai' };
   } catch (err) {
     const durationMs = Date.now() - start;
+    const errText = String(err);
+    const isAuth = /\b401\b|\b403\b|incorrect api key|authentication/i.test(errText);
     return {
       ok: false,
       durationMs,
-      reason: 'OPENAI_CALL_FAILED',
-      error: String(err).slice(0, 220),
+      reason: isAuth ? 'OPENAI_AUTH_FAILED' : 'OPENAI_CALL_FAILED',
+      error: errText.slice(0, 220),
       label: 'openai',
     };
   }
@@ -185,13 +187,61 @@ async function channelPollCheck(url, label) {
   }
 }
 
+async function crmLeadsCheck() {
+  const start = Date.now();
+  try {
+    const res = await fetch('http://127.0.0.1:3000/api/crm/leads', {
+      method: 'GET',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
+    });
+    const text = await res.text().catch(() => '');
+    const durationMs = Date.now() - start;
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return { ok: false, status: res.status, durationMs, error: 'NOT_JSON', label: 'crm' };
+    }
+    const ok = res.ok && parsed.status === 'ready' && Array.isArray(parsed.leads);
+    return { ok, status: res.status, durationMs, label: 'crm' };
+  } catch (err) {
+    return { ok: false, status: 0, durationMs: Date.now() - start, error: String(err), label: 'crm' };
+  }
+}
+
+async function whatsappHealthCheck() {
+  const start = Date.now();
+  try {
+    const res = await fetch('http://127.0.0.1:3000/api/whatsapp/health', {
+      method: 'GET',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
+    });
+    const text = await res.text().catch(() => '');
+    const durationMs = Date.now() - start;
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return { ok: false, status: res.status, durationMs, error: 'NOT_JSON', label: 'whatsapp' };
+    }
+    const ok = res.ok && parsed.ok === true;
+    return { ok, status: res.status, durationMs, label: 'whatsapp' };
+  } catch (err) {
+    return { ok: false, status: 0, durationMs: Date.now() - start, error: String(err), label: 'whatsapp' };
+  }
+}
+
 async function runAllChecks() {
   const health = await healthCheck();
   const channelLocal = await channelPollCheck(CHANNEL_LOCAL_URL, 'channelLocal');
   const channelPublic = await channelPollCheck(CHANNEL_PUBLIC_URL, 'channelPublic');
   const openai = await openaiAuthCheck();
-  const overallOk = Boolean(health.ok && channelLocal.ok && channelPublic.ok && openai.ok);
-  return { health, channelLocal, channelPublic, openai, overallOk };
+  const crm = await crmLeadsCheck();
+  const whatsapp = await whatsappHealthCheck();
+  const overallOk = Boolean(health.ok && channelLocal.ok && channelPublic.ok && openai.ok && crm.ok && whatsapp.ok);
+  return { health, channelLocal, channelPublic, openai, crm, whatsapp, overallOk };
 }
 
 function summarizeFailure(checks) {
@@ -200,6 +250,8 @@ function summarizeFailure(checks) {
   if (!checks.channelLocal.ok) parts.push('kanal(kohalik)');
   if (!checks.channelPublic.ok) parts.push('kanal(avalik/tunnel)');
   if (checks.openai && !checks.openai.ok) parts.push('openai(autentimine)');
+  if (checks.crm && !checks.crm.ok) parts.push('crm');
+  if (checks.whatsapp && !checks.whatsapp.ok) parts.push('whatsapp');
   return parts.length ? parts.join(', ') : '';
 }
 
@@ -280,6 +332,18 @@ async function main() {
         reason: checks.openai.reason || null,
         error: checks.openai.error || null,
       },
+      crm: {
+        ok: checks.crm.ok,
+        status: checks.crm.status,
+        durationMs: checks.crm.durationMs,
+        error: checks.crm.error || null,
+      },
+      whatsapp: {
+        ok: checks.whatsapp.ok,
+        status: checks.whatsapp.status,
+        durationMs: checks.whatsapp.durationMs,
+        error: checks.whatsapp.error || null,
+      },
     },
     lastRemediateAt: state.lastRemediateAt || null,
     lastRemediateAction: remediate.ran ? remediate.action : state.lastRemediateAction || null,
@@ -298,7 +362,25 @@ async function main() {
     return;
   }
 
-  const title = overallOk ? 'Jarvis OK' : 'Jarvis PROBLEM';
+  const problemKind = (() => {
+    if (overallOk) return 'OK';
+    const h = Boolean(checks.health.ok);
+    const cl = Boolean(checks.channelLocal.ok);
+    const cp = Boolean(checks.channelPublic.ok);
+    const oai = Boolean(checks.openai?.ok);
+    if (h && cl && cp && !oai) return 'OPENAI';
+    if (h && cl && !cp) return 'KANAL_AVALIK';
+    if (!h || !cl) return 'KOHALIK';
+    return 'PROBLEM';
+  })();
+
+  const title = overallOk
+    ? 'Jarvis OK'
+    : problemKind === 'OPENAI'
+      ? 'OpenAI PROBLEM'
+      : problemKind === 'KANAL_AVALIK'
+        ? 'Kanal PROBLEM'
+        : 'Jarvis PROBLEM';
   const pushBody = overallOk
     ? 'Taastus (sh kanal + OpenAI).'
     : failSummary
@@ -307,12 +389,26 @@ async function main() {
 
   const openaiHint =
     checks.openai && !checks.openai.ok
-      ? ` OpenAI: ${checks.openai.reason || 'FAIL'}${checks.openai.error ? ` — ${checks.openai.error}` : ''}. Paranda .env (OPENAI_API_KEY jms), siis pm2 restart jarvis --update-env.`
+      ? ` OpenAI: ${checks.openai.reason || 'FAIL'}${checks.openai.error ? ` — ${checks.openai.error}` : ''}.`
       : '';
 
+  const nextHint = (() => {
+    if (overallOk) return '';
+    if (checks.openai && !checks.openai.ok) {
+      return ' Next: paranda .env OPENAI_API_KEY ja tee pm2 restart jarvis --update-env.';
+    }
+    if (!checks.health.ok || !checks.channelLocal.ok) {
+      return ' Next: pm2 restart jarvis (või oota, autocheck teeb ühe taastumiskatse).';
+    }
+    if (checks.health.ok && checks.channelLocal.ok && !checks.channelPublic.ok) {
+      return ' Next: pm2 restart cloudflared.';
+    }
+    return '';
+  })();
+
   const telegramBody = overallOk
-    ? `Taastus. health + kanal + OpenAI OK (kohalik + avalik tunnel).`
-    : `FAIL: ${failSummary || 'tundmatu'}. health HTTP ${checks.health.status || 0}, chL HTTP ${checks.channelLocal.status || 0}, chPub HTTP ${checks.channelPublic.status || 0}.${openaiHint} ${remediate.ran ? `Remediate: ${remediate.action} (exit ${remediate.ok ? 'OK' : 'FAIL'}). ` : ''}`.trim();
+    ? `Taastus. health+kanal+OpenAI OK.`
+    : `FAIL: ${failSummary || 'tundmatu'}. h=${checks.health.status || 0} chL=${checks.channelLocal.status || 0} chPub=${checks.channelPublic.status || 0}.${openaiHint}${remediate.ran ? ` Remediate: ${remediate.action} (exit ${remediate.ok ? 'OK' : 'FAIL'}).` : ''}${nextHint}`.trim();
 
   const telegram = await sendTelegram(
     `<b>${title}</b>\n${telegramBody}\n\nNext: npm run channel:check — pm2 logs cloudflared --lines 40 --nostream`,

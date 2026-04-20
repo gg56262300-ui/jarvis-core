@@ -6,6 +6,19 @@ const crmService = new CrmService();
 export const registerCrmModule = (app: Express) => {
   const router = Router();
 
+  const normalizePhone = (value: unknown): string => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    return raw.replace(/[^\d+]/g, '');
+  };
+
+  const normalizeOptional = (value: unknown, maxLen = 200): string | null => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+    const compact = raw.replace(/\s+/g, ' ');
+    return compact.length > maxLen ? compact.slice(0, maxLen) : compact;
+  };
+
   router.get('/leads', (_req, res) => {
     res.json({
       status: 'ready',
@@ -54,10 +67,13 @@ export const registerCrmModule = (app: Express) => {
   });
 
   router.post('/leads', (req, res) => {
-    const phone = String(req.body?.phone ?? '').trim();
-    const name = req.body?.name ? String(req.body.name).trim() : null;
-    const tag = req.body?.tag ? String(req.body.tag).trim() : null;
-    const notes = req.body?.notes ? String(req.body.notes).trim() : null;
+    const phone = normalizePhone(req.body?.phone);
+    const name = normalizeOptional(req.body?.name, 120);
+    const tag = normalizeOptional(req.body?.tag, 80);
+    const notes = normalizeOptional(req.body?.notes, 800);
+    const projectCode = normalizeOptional(req.body?.projectCode, 40);
+    const city = normalizeOptional(req.body?.city, 120);
+    const serviceType = normalizeOptional(req.body?.serviceType, 120);
     const sourceRaw = req.body?.source ? String(req.body.source).trim().toLowerCase() : 'manual';
     const source =
       sourceRaw === 'whatsapp' || sourceRaw === 'web' || sourceRaw === 'manual' ? sourceRaw : 'manual';
@@ -73,12 +89,26 @@ export const registerCrmModule = (app: Express) => {
       return;
     }
 
+    if (phone.length < 7) {
+      res.status(400).json({
+        error: {
+          code: 'CRM_PHONE_INVALID',
+          message: 'Lead phone is invalid.',
+          details: { phone },
+        },
+      });
+      return;
+    }
+
     const lead = crmService.createLead({
       source,
       phone,
       name,
       tag,
       notes,
+      projectCode,
+      city,
+      serviceType,
     });
 
     res.json({

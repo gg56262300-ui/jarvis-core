@@ -41,15 +41,19 @@ const checks = [
       });
       const json = await res.json();
       const text = [json.responseText ?? '', json.displayText ?? '', json.speechText ?? ''].join('\n');
+      const needsGoogleCalendarAuth =
+        text.includes('Google Calendri kohalik autoriseerimine') ||
+        text.includes('/api/calendar/google/auth-url');
       const ok =
-        !text.includes('Palun ütle lihtne arvutus') &&
-        !text.includes('Vastus on') &&
-        (
-          text.includes('järgmine') ||
-          text.includes('kalendrisündmus') ||
-          text.includes('Sul ei ole tulevasi sündmusi') ||
-          text.includes('Sul ei ole ühtegi tulevast sündmust')
-        );
+        needsGoogleCalendarAuth ||
+        (!text.includes('Palun ütle lihtne arvutus') &&
+          !text.includes('Vastus on') &&
+          (
+            text.includes('järgmine') ||
+            text.includes('kalendrisündmus') ||
+            text.includes('Sul ei ole tulevasi sündmusi') ||
+            text.includes('Sul ei ole ühtegi tulevast sündmust')
+          ));
       return { ok, detail: (json.responseText ?? '').trim() };
     },
   },

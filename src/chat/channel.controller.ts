@@ -13,6 +13,11 @@ type ChatChannelMessage = {
 
 const CHAT_CHANNEL_PATH = path.resolve(process.cwd(), 'logs', 'chat-channel.jsonl');
 const MAX_TEXT_CHARS = 1200;
+/** Max sõnumeid ühes GET vastuses (kaitse suurte payloadide vastu). */
+const CHANNEL_GET_MAX_LIMIT = 100;
+const CHANNEL_GET_DEFAULT_LIMIT = 50;
+/** Loe kuni N rida faili lõpust (ülemine piir enne filtreerimist). */
+const CHANNEL_READ_TAIL = 500;
 
 function readBridgeToken(req: Request): string {
   const header = String(req.headers['x-jarvis-bridge-token'] ?? '').trim();
@@ -32,7 +37,7 @@ async function readMessagesTail(limit = 200): Promise<ChatChannelMessage[]> {
   try {
     const raw = await fs.readFile(CHAT_CHANNEL_PATH, 'utf8');
     const lines = raw.split('\n').filter((line) => line.trim() !== '');
-    const slice = lines.slice(-Math.max(1, Math.min(limit, 500)));
+    const slice = lines.slice(-Math.max(1, Math.min(limit, CHANNEL_READ_TAIL)));
     const out: ChatChannelMessage[] = [];
     for (const line of slice) {
       try {
@@ -109,10 +114,17 @@ export async function postChatChannelUserMessage(req: Request, res: Response) {
 
 export async function getChatChannelMessages(req: Request, res: Response) {
   const afterRaw = Number(req.query.after ?? 0);
-  const after = Number.isFinite(afterRaw) ? afterRaw : 0;
-  const all = await readMessagesTail(300);
-  const messages = all.filter((item) => item.id > after).slice(-50);
+  let after = Number.isFinite(afterRaw) ? afterRaw : 0;
+  if (after < 0) after = 0;
+
+  const limitRaw = Number(req.query.limit ?? CHANNEL_GET_DEFAULT_LIMIT);
+  let limit = Number.isFinite(limitRaw) ? Math.floor(limitRaw) : CHANNEL_GET_DEFAULT_LIMIT;
+  if (limit < 1) limit = 1;
+  if (limit > CHANNEL_GET_MAX_LIMIT) limit = CHANNEL_GET_MAX_LIMIT;
+
+  const all = await readMessagesTail(CHANNEL_READ_TAIL);
+  const messages = all.filter((item) => item.id > after).slice(-limit);
   const next = messages.at(-1)?.id ?? after;
-  res.json({ ok: true, messages, next });
+  res.json({ ok: true, messages, next, limit });
 }
 

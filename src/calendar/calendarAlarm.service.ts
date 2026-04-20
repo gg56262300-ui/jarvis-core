@@ -131,7 +131,17 @@ export async function listDueCalendarAlarms(): Promise<DueCalendarAlarm[]> {
   const fromIso = new Date(now - 8 * 60 * 60 * 1000).toISOString();
   const toIso = new Date(now + 96 * 60 * 60 * 1000).toISOString();
 
-  const events = await listEventsInTimeRange(fromIso, toIso, 150);
+  let events: CalendarEventItem[];
+  try {
+    events = await listEventsInTimeRange(fromIso, toIso, 150);
+  } catch (err) {
+    // Kui Google token puudub (ENOENT), ära tekita 500-spämmi – alarmid pole lihtsalt saadaval.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/ENOENT: no such file or directory/i.test(msg) && /google-calendar-token\.json/i.test(msg)) {
+      return [];
+    }
+    throw err;
+  }
 
   type Candidate = DueCalendarAlarm & { alarmAtMs: number; endMs: number };
 

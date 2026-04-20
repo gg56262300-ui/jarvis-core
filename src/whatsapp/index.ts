@@ -10,6 +10,26 @@ const whatsappService = new WhatsappService();
 export const registerWhatsappModule = (app: Express) => {
   const router = Router();
 
+  router.get('/health', (_req: Request, res: Response) => {
+    const verifyToken = Boolean(env.WHATSAPP_CLOUD_VERIFY_TOKEN?.trim());
+    const appSecret = Boolean(env.WHATSAPP_CLOUD_APP_SECRET?.trim());
+    const accessToken = Boolean(env.WHATSAPP_CLOUD_ACCESS_TOKEN?.trim());
+    const phoneNumberId = Boolean(env.WHATSAPP_CLOUD_PHONE_NUMBER_ID?.trim());
+
+    const missing: string[] = [];
+    if (!verifyToken) missing.push('WHATSAPP_CLOUD_VERIFY_TOKEN');
+    if (!accessToken) missing.push('WHATSAPP_CLOUD_ACCESS_TOKEN');
+    if (!phoneNumberId) missing.push('WHATSAPP_CLOUD_PHONE_NUMBER_ID');
+    if (env.NODE_ENV === 'production' && !appSecret) missing.push('WHATSAPP_CLOUD_APP_SECRET');
+
+    res.json({
+      status: missing.length === 0 ? 'ready' : 'degraded',
+      ok: missing.length === 0,
+      missing,
+      signatureVerification: env.NODE_ENV === 'production' ? (appSecret ? 'enabled' : 'required') : appSecret ? 'enabled' : 'dev_only_off',
+    });
+  });
+
   router.get('/webhook', (req: Request, res: Response) => {
     const verifyToken = env.WHATSAPP_CLOUD_VERIFY_TOKEN?.trim();
     if (!verifyToken) {
@@ -87,7 +107,7 @@ export const registerWhatsappModule = (app: Express) => {
     if (result.status === 'error') {
       res.status(400).json({
         error: {
-          code: 'WHATSAPP_PHONE_REQUIRED',
+          code: 'WHATSAPP_INBOUND_INVALID',
           message: result.responseText,
           details: null,
         },
