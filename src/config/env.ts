@@ -52,6 +52,8 @@ const envSchema = z.object({
   /** WhatsApp Business telefoninumbri ID (Graph API URL-is). */
   WHATSAPP_CLOUD_PHONE_NUMBER_ID: z.string().optional(),
   WHATSAPP_CLOUD_GRAPH_VERSION: z.string().optional(),
+  /** Kui seatud, lubatakse /api/agent-inbox ja chat sõnumite jälg `logs/agent-inbox.jsonl` faili. */
+  JARVIS_AGENT_INBOX_TOKEN: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

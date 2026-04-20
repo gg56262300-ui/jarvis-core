@@ -262,14 +262,38 @@ export async function listEventsInTimeRange(
   return events.map((event) => mapGoogleEvent(event, defaultPopup));
 }
 
-/** Järgmised N päeva alates praegusest hetkest (primary kalender). */
-export async function listUpcomingEventsWithinDays(days: number, maxResults = 80): Promise<CalendarEventItem[]> {
-  const from = DateTime.now().setZone(DEFAULT_CALENDAR_TIMEZONE).toUTC();
-  const to = from.plus({ days: Math.max(1, Math.min(days, 366)) });
-  return listEventsInTimeRange(from.toISO()!, to.toISO()!, maxResults);
+/** Brauseri saadetud YYYY-MM-DD → selle kalendripäeva algus kohalikus vööndis (Luxon). */
+function startOfLocalDayFromClientYmd(ymd: string, timeZone: string): DateTime | null {
+  const m = ymd.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (y < 2000 || y > 2100) return null;
+  const dt = DateTime.fromObject({ year: y, month: mo, day: d }, { zone: timeZone }).startOf('day');
+  return dt.isValid ? dt : null;
 }
 
-const MAX_BULK_DELETE = 60;
+/**
+ * Järgmised N kalendripäeva (primary kalender).
+ * Kui `clientLocalTodayYmd` on olemas, alustatakse selle päeva keskööl (mitte ainult „nüüd“ hetkest) —
+ * nii ei jää tänased hommikused sündmused pärastlõunal „upcoming“ loendist välja ja kuupäev ühtib brauseriga.
+ */
+export async function listUpcomingEventsWithinDays(
+  days: number,
+  maxResults = 80,
+  timeZone: string = DEFAULT_CALENDAR_TIMEZONE,
+  clientLocalTodayYmd?: string | null,
+): Promise<CalendarEventItem[]> {
+  const zonedNow = DateTime.now().setZone(timeZone);
+  const fromClient = clientLocalTodayYmd ? startOfLocalDayFromClientYmd(clientLocalTodayYmd, timeZone) : null;
+  const from = fromClient ?? zonedNow;
+  const to = from.plus({ days: Math.max(1, Math.min(days, 366)) });
+  return listEventsInTimeRange(from.toUTC().toISO()!, to.toUTC().toISO()!, maxResults);
+}
+
+/** Ühe päringu mass; kordame vooru kuni päeval pole enam kattuvaid sündmusi (palju testisündmusi). */
+const MAX_BULK_DELETE_TOTAL = 800;
 
 /** Kustuta kõik sündmused antud kalendripäevadel (üksikud instantsid, k.a korduvad lahti lõhutud). */
 export async function deleteAllEventsOnCalendarDates(
@@ -282,16 +306,28 @@ export async function deleteAllEventsOnCalendarDates(
 
   for (const d of datesYmd) {
     const day = d.trim();
-    const events = await listEventsOverlappingLocalInclusiveRange(day, day, timeZone, { maxApiResults: 8000 });
-    for (const ev of events) {
-      if (!ev.id || seen.has(ev.id)) continue;
-      if (deletedIds.length >= MAX_BULK_DELETE) {
-        notes.push(`Kustutamise ülempiir (${MAX_BULK_DELETE}) saavutatud — järgmised jäid vahele.`);
-        return { deleted: deletedIds.length, deletedIds, notes };
+    let rounds = 0;
+    while (rounds < 80) {
+      rounds += 1;
+      const events = await listEventsOverlappingLocalInclusiveRange(day, day, timeZone, { maxApiResults: 8000 });
+      const pending = events.filter((ev) => ev.id && !seen.has(ev.id));
+      if (!pending.length) {
+        break;
       }
-      await deleteCalendarEventById(ev.id);
-      seen.add(ev.id);
-      deletedIds.push(ev.id);
+      for (const ev of pending) {
+        if (deletedIds.length >= MAX_BULK_DELETE_TOTAL) {
+          notes.push(
+            `Kustutamise ülempiir (${MAX_BULK_DELETE_TOTAL}) saavutatud — sama päeva võib jätkata uue käsuga.`,
+          );
+          return { deleted: deletedIds.length, deletedIds, notes };
+        }
+        await deleteCalendarEventById(ev.id);
+        seen.add(ev.id);
+        deletedIds.push(ev.id);
+      }
+    }
+    if (rounds >= 80) {
+      notes.push(`Päeva ${day} kustutamise voorud said otsa — kontrolli kalendrit.`);
     }
   }
 

@@ -1,8 +1,9 @@
 {
-  "name": "Jarvis",
-  "short_name": "Jarvis",
+  "name": "Robert — Jarvis",
+  "short_name": "Robert",
   "lang": "et",
-  "start_url": "/",
+  "start_url": "/chat.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#07120e",
   "theme_color": "#103226",

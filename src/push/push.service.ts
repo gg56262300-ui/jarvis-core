@@ -58,18 +58,6 @@ export class PushService {
   }
 
   async notifyPendingConfirmation(input: { label?: string; id?: string }) {
-    const vapid = await this.ensureVapidKeys();
-    if (!vapid) return { ok: false as const, error: 'VAPID_NOT_READY' as const };
-
-    const store = await this.readSubscriptions();
-    if (store.subscriptions.length === 0) return { ok: true as const, sent: 0, remaining: 0 };
-
-    webpush.setVapidDetails(
-      env.PUSH_SUBJECT ?? 'mailto:jarvis@localhost',
-      vapid.publicKey,
-      vapid.privateKey,
-    );
-
     const title = 'Jarvis: vaja kinnitust';
     const body =
       input.label?.trim() ||
@@ -80,6 +68,32 @@ export class PushService {
       body,
       url: '/chat.html',
     });
+    return this.deliverPayload(payload);
+  }
+
+  /** Omaniku test: lühike tekst Web Push kanaliga (sama subscribe nimekiri). */
+  async sendTestPing(bodyText: string) {
+    const body = bodyText.trim().slice(0, 500) || 'ping';
+    const payload = JSON.stringify({
+      title: 'Jarvis: test',
+      body,
+      url: '/chat.html',
+    });
+    return this.deliverPayload(payload);
+  }
+
+  private async deliverPayload(payload: string) {
+    const vapid = await this.ensureVapidKeys();
+    if (!vapid) return { ok: false as const, error: 'VAPID_NOT_READY' as const };
+
+    const store = await this.readSubscriptions();
+    if (store.subscriptions.length === 0) return { ok: true as const, sent: 0, remaining: 0 };
+
+    webpush.setVapidDetails(
+      env.PUSH_SUBJECT ?? 'https://jarvis-kait.us',
+      vapid.publicKey,
+      vapid.privateKey,
+    );
 
     const nextSubscriptions: PushSubscriptionLike[] = [];
     let sent = 0;
@@ -97,7 +111,18 @@ export class PushService {
           error && typeof error === 'object' && 'statusCode' in error
             ? Number((error as { statusCode?: unknown }).statusCode ?? 0) || 0
             : 0;
-        const shouldDrop = statusCode === 404 || statusCode === 410;
+        const errorBodyRaw =
+          error && typeof error === 'object' && 'body' in error
+            ? (error as { body?: unknown }).body
+            : '';
+        const errorBody =
+          typeof errorBodyRaw === 'string'
+            ? errorBodyRaw
+            : errorBodyRaw && typeof errorBodyRaw === 'object'
+              ? JSON.stringify(errorBodyRaw)
+              : '';
+        const isBadJwt = statusCode === 403 && errorBody.includes('BadJwtToken');
+        const shouldDrop = statusCode === 404 || statusCode === 410 || isBadJwt;
         logger.warn({ err: error, statusCode, endpoint: sub.endpoint }, 'Push send failed');
         if (!shouldDrop) {
           nextSubscriptions.push(sub);
@@ -110,6 +135,16 @@ export class PushService {
     }
 
     return { ok: true as const, sent, remaining: nextSubscriptions.length };
+  }
+
+  async getStatus() {
+    const vapid = await this.ensureVapidKeys();
+    const store = await this.readSubscriptions();
+    return {
+      ok: true as const,
+      vapidReady: Boolean(vapid?.publicKey && vapid?.privateKey),
+      subscriptions: store.subscriptions.length,
+    };
   }
 
   private async ensureVapidKeys(): Promise<VapidKeys | null> {
@@ -165,7 +200,7 @@ export class PushService {
       const raw = await fs.readFile(this.subscriptionsPath, 'utf8');
       const parsed = JSON.parse(raw) as StoredSubscriptions;
       if (!Array.isArray(parsed.subscriptions)) return { subscriptions: [] };
-      return { subscriptions: parsed.subscriptions.filter(Boolean) as PushSubscriptionLike[] };
+      return { subscriptions: parsed.subscriptions.filter(Boolean) };
     } catch {
       return { subscriptions: [] };
     }

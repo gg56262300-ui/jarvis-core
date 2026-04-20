@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
   <title>Robert — Jarvis</title>
   <link rel="manifest" href="/manifest.webmanifest" />
   <style>
@@ -35,40 +37,139 @@
     .header-actions {
       margin-left: auto;
       display: flex;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
+      flex-shrink: 0;
     }
 
-    .sound-toggle {
-      border: 1px solid #2a2d3a;
-      background: #0f1117;
-      color: #e8e8e8;
-      padding: 8px 10px;
-      border-radius: 14px;
-      font-size: 12px;
+    /**
+     * Hääle keel: RU vasakul, ET paremal — liugur nagu lüliti (aktiivne pool eredam).
+     */
+    .lang-slide-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .lang-slide-side {
+      border: none;
+      background: none;
+      padding: 0 2px;
+      margin: 0;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
       cursor: pointer;
-      white-space: nowrap;
+      line-height: 1;
+      min-width: 1.25rem;
+      text-align: center;
+      transition: opacity 0.22s ease, color 0.22s ease, transform 0.22s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
     }
 
-    .sound-toggle.on {
-      border-color: #2bbf7b;
-      background: rgba(62, 207, 142, 0.15);
+    .lang-slide-wrap.speech-lang--ru .lang-slide-side.ru {
+      opacity: 1;
+      color: #f8fafc;
+      transform: scale(1.05);
     }
 
-    .push-toggle {
-      border: 1px solid #2a2d3a;
-      background: #0f1117;
-      color: #e8e8e8;
-      padding: 8px 10px;
-      border-radius: 14px;
-      font-size: 12px;
+    .lang-slide-wrap.speech-lang--ru .lang-slide-side.et {
+      opacity: 0.38;
+      color: #64748b;
+    }
+
+    .lang-slide-wrap.speech-lang--et .lang-slide-side.et {
+      opacity: 1;
+      color: #f8fafc;
+      transform: scale(1.05);
+    }
+
+    .lang-slide-wrap.speech-lang--et .lang-slide-side.ru {
+      opacity: 0.38;
+      color: #64748b;
+    }
+
+    .lang-slide-track {
+      position: relative;
+      width: 50px;
+      height: 28px;
+      border-radius: 999px;
+      border: 1px solid #334155;
+      background: linear-gradient(180deg, #151821 0%, #0c0e14 100%);
+      padding: 0;
       cursor: pointer;
-      white-space: nowrap;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
-    .push-toggle.on {
+    .lang-slide-thumb {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: linear-gradient(165deg, #a5b4fc 0%, #6c63ff 55%, #4f46e5 100%);
+      box-shadow:
+        0 2px 8px rgba(79, 70, 229, 0.55),
+        0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+      transition: transform 0.26s cubic-bezier(0.34, 1.2, 0.64, 1);
+      pointer-events: none;
+    }
+
+    .lang-slide-wrap.speech-lang--et .lang-slide-thumb {
+      transform: translateX(22px);
+    }
+
+    /** Väikesed ringid: sees = eredam, väljas = endiselt selgelt nähtav */
+    .header-icon-btn {
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      border-radius: 50%;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #5b6478;
+      background: #1f2230;
+      color: #e2e8f0;
+      cursor: pointer;
+      opacity: 0.95;
+      transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s, background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .header-icon-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      pointer-events: none;
+    }
+
+    .header-icon-btn.on {
+      opacity: 1;
+      color: #e8e8e8;
+    }
+
+    .header-icon-btn.sound.on {
+      border-color: #34d399;
+      background: rgba(52, 211, 153, 0.12);
+      box-shadow: 0 0 12px rgba(52, 211, 153, 0.35);
+    }
+
+    .header-icon-btn.push.on {
       border-color: #60a5fa;
-      background: rgba(96, 165, 250, 0.15);
+      background: rgba(96, 165, 250, 0.12);
+      box-shadow: 0 0 12px rgba(96, 165, 250, 0.35);
     }
 
     .avatar {
@@ -167,19 +268,22 @@
     .typing {
       align-self: flex-start;
       background: #1e2130;
+      border: 1px solid #3b82f6;
+      box-shadow: 0 0 14px rgba(59, 130, 246, 0.35);
       border-radius: 18px;
       border-bottom-left-radius: 4px;
       padding: 12px 16px;
       display: none;
+      animation: typingPulse 1.6s ease-in-out infinite;
     }
 
     .typing span {
       display: inline-block;
-      width: 7px; height: 7px;
-      background: #6b7280;
+      width: 9px; height: 9px;
+      background: #93c5fd;
       border-radius: 50%;
       animation: bounce 1.2s infinite;
-      margin: 0 2px;
+      margin: 0 3px;
     }
     .typing span:nth-child(2) { animation-delay: 0.2s; }
     .typing span:nth-child(3) { animation-delay: 0.4s; }
@@ -189,7 +293,124 @@
       30% { transform: translateY(-6px); }
     }
 
+    @keyframes typingPulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.25); }
+      50% { box-shadow: 0 0 18px rgba(59, 130, 246, 0.55); }
+    }
+
+    /* Ülemine edenemisriba, et omanik näeks: kanal töötab, päring käib */
+    #progressBar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #3b82f6, #22d3ee, #3b82f6);
+      background-size: 200% 100%;
+      opacity: 0;
+      transform: translateZ(0);
+      transition: opacity 0.15s ease-in-out;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    #progressBar.on {
+      opacity: 1;
+      animation: progressSlide 1.1s linear infinite;
+    }
+
+    @keyframes progressSlide {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 200% 50%; }
+    }
+
+    /* Olekurea sära, kui päring käib */
+    body.busy #statusLine {
+      color: #93c5fd;
+    }
+
+    /* Iga kasutajasõnumi enda olekumarker — nähtav vänt/linnuke mulli kõrval */
+    .msg-wrap.user {
+      position: relative;
+    }
+    .msg-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      margin-right: 6px;
+      vertical-align: middle;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s, opacity 0.2s;
+      flex-shrink: 0;
+    }
+    .msg-status[data-state="sending"] {
+      background: transparent;
+      color: #93c5fd;
+      border: 2px solid #93c5fd;
+      border-top-color: transparent;
+      animation: msgSpin 0.9s linear infinite;
+      box-shadow: 0 0 10px rgba(147, 197, 253, 0.55);
+    }
+    .msg-status[data-state="done"] {
+      background: #10b981;
+      color: #052e16;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.55);
+    }
+    .msg-status[data-state="error"] {
+      background: #ef4444;
+      color: #1c0a00;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.55);
+    }
+    @keyframes msgSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Kasutaja enda mull pulseerib nõrgalt, kuni saabub vastus */
+    .msg-wrap.user[data-status="sending"] .msg {
+      animation: userMsgPulse 1.2s ease-in-out infinite;
+      box-shadow: 0 0 14px rgba(147, 197, 253, 0.45);
+    }
+    @keyframes userMsgPulse {
+      0%, 100% { box-shadow: 0 0 10px rgba(147, 197, 253, 0.35); }
+      50% { box-shadow: 0 0 18px rgba(147, 197, 253, 0.7); }
+    }
+
+    /* Elava kanali indikaator — alati päises näha. Roheline = ooteseis, sinine + pöörlev = aktiivne päring. */
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.65);
+      animation: livePulse 2s ease-in-out infinite;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+    body.busy .live-dot {
+      background: #3b82f6;
+      box-shadow: 0 0 14px rgba(59, 130, 246, 0.8);
+      animation: liveSpin 1.1s linear infinite;
+    }
+    .header-info .status-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+    }
+    @keyframes livePulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.25); opacity: 1; }
+    }
+    @keyframes liveSpin {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.4); }
+    }
+
     .footer-stack {
+      --footer-btn: 44px;
       padding: 10px 12px 12px;
       background: #1a1d27;
       border-top: 1px solid #2a2d3a;
@@ -208,6 +429,7 @@
       border: 1px solid #2a2d3a;
       border-radius: 16px;
       background: #0f1117;
+      flex-wrap: nowrap;
     }
 
     .reply-confirm-row {
@@ -215,8 +437,8 @@
       flex-direction: column;
       width: 100%;
       align-items: stretch;
-      gap: 8px;
-      padding: 6px 4px 2px;
+      gap: 6px;
+      padding: 4px 2px 2px;
     }
 
     .reply-confirm-row[hidden] {
@@ -233,13 +455,23 @@
     }
 
     .reply-confirm-btn {
-      border: 1px solid #2a2d3a;
-      padding: 10px 18px;
-      border-radius: 16px;
-      font-weight: 700;
-      font-size: 14px;
+      width: var(--footer-btn);
+      height: var(--footer-btn);
+      min-width: var(--footer-btn);
+      border-radius: 50%;
+      padding: 0;
+      font-weight: 800;
+      font-size: 13px;
       cursor: pointer;
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     .reply-confirm-btn.yes {
@@ -266,24 +498,46 @@
 
     .reply-confirm-btns {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      gap: 10px;
       justify-content: center;
       align-items: center;
       width: 100%;
     }
 
-    .footer-input-row {
+    /** Tekst üleval täislaiuses; alumine rida: ✕ | keskel mikrofon | saada (ühesuurused ringid) */
+    .footer-compose {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .footer-controls-row {
       display: flex;
       gap: 8px;
-      align-items: flex-end;
+      align-items: center;
       width: 100%;
     }
 
-    /** Vasak ✕ ja parem saada — sama mõõt (42px), alumine serv joondub tekstiväljaga */
-    .footer-round-btn {
-      width: 42px;
-      height: 42px;
+    .footer-mic-slot {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-width: 0;
+    }
+
+    /** iOS: emoji asemel SVG, muidu tekstivalik / Kopeeri menüü */
+    .footer-round-btn,
+    .voice-btn,
+    #send {
+      width: var(--footer-btn);
+      height: var(--footer-btn);
+      min-width: var(--footer-btn);
+      min-height: var(--footer-btn);
       border-radius: 50%;
       flex-shrink: 0;
       display: flex;
@@ -291,12 +545,22 @@
       justify-content: center;
       padding: 0;
       cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .footer-round-btn {
       border: 1px solid #2a2d3a;
       background: #0f1117;
       color: #94a3b8;
-      font-size: 18px;
-      line-height: 1;
       transition: border-color 0.2s, background 0.2s, color 0.2s;
+    }
+
+    .footer-round-btn svg {
+      pointer-events: none;
     }
 
     .footer-round-btn:hover {
@@ -304,31 +568,17 @@
       color: #e8e8e8;
     }
 
-    .footer-input-center {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      min-width: 0;
-    }
-
     .voice-btn {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
       border: 1px solid #2a2d3a;
       background: #0f1117;
       color: #e8e8e8;
-      font-size: 19px;
-      line-height: 1;
-      cursor: pointer;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
       transition: border-color 0.2s, background 0.2s;
+    }
+
+    .voice-btn svg,
+    .voice-btn .voice-btn-svg {
+      pointer-events: none;
+      display: block;
     }
 
     .voice-btn:hover {
@@ -359,7 +609,7 @@
       word-break: break-word;
     }
 
-    body.chat-reply-confirm-active .footer-input-center #input {
+    body.chat-reply-confirm-active .footer-compose #input {
       max-width: min(92%, 320px);
       align-self: center;
     }
@@ -374,15 +624,26 @@
     }
 
     .confirm-btn {
+      width: var(--footer-btn);
+      height: var(--footer-btn);
+      min-width: var(--footer-btn);
       border: 1px solid #2a2d3a;
       background: #1e2130;
       color: #e8e8e8;
-      padding: 8px 12px;
-      border-radius: 14px;
-      font-weight: 600;
+      padding: 0;
+      border-radius: 50%;
+      font-weight: 700;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 10px;
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     .confirm-btn.yes { background: #3ecf8e; color: #0f1117; border-color: #2bbf7b; }
@@ -409,18 +670,13 @@
     #input::placeholder { color: #4b5563; }
 
     #send {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
       background: #6c63ff;
       border: none;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
       transition: background 0.2s;
-      padding: 0;
+    }
+
+    #send svg {
+      pointer-events: none;
     }
 
     #send:hover {
@@ -532,17 +788,92 @@
   </style>
 </head>
 <body>
+  <div id="progressBar" aria-hidden="true"></div>
   <header>
     <div class="avatar">R</div>
     <div class="header-info">
       <h1>Robert</h1>
-      <p id="statusLine" class="ok">Jarvise assistent · kontrollin ühendust…</p>
+      <p id="statusLine" class="ok"><span class="status-row"><span class="live-dot" aria-hidden="true"></span><span id="statusLineText">Jarvise assistent · kontrollin ühendust…</span></span></p>
     </div>
     <div class="header-actions">
-      <button class="sound-toggle" id="soundToggle" type="button">Sound: OFF</button>
-      <button class="push-toggle" id="pushToggle" type="button">Push: OFF</button>
+      <div
+        class="lang-slide-wrap speech-lang--et"
+        id="speechLangWrap"
+        role="group"
+        aria-label="Hääletuvastus: RU või ET"
+      >
+        <button type="button" class="lang-slide-side ru" id="speechLabelRu" title="Vene hääletuvastus">
+          RU
+        </button>
+        <button
+          type="button"
+          class="lang-slide-track"
+          id="speechLangTrack"
+          role="switch"
+          title="Vaheta keelt"
+          aria-label="Hääletuvastus: RU või ET"
+          aria-checked="true"
+        >
+          <span class="lang-slide-thumb" id="speechLangThumb" aria-hidden="true"></span>
+        </button>
+        <button type="button" class="lang-slide-side et" id="speechLabelEt" title="Eesti hääletuvastus">
+          ET
+        </button>
+      </div>
+      <button
+        type="button"
+        class="header-icon-btn sound"
+        id="soundToggle"
+        aria-label="Helisignaal"
+        title="Helisignaal vestluses"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"
+          />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="header-icon-btn push"
+        id="pushToggle"
+        aria-label="Push-teavitused"
+        title="Push-teavitused"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"
+          />
+        </svg>
+      </button>
     </div>
   </header>
+
+  <div
+    id="channelFallbackBar"
+    hidden
+    style="padding:8px 12px;border-bottom:1px solid #3b3f4d;background:#111827;color:#e5e7eb;display:flex;flex-direction:column;gap:8px;"
+  >
+    <div style="font-size:13px;line-height:1.35;">
+      <strong>Kanali varuteade:</strong>
+      <span id="channelFallbackText"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input
+        id="channelFallbackInput"
+        type="text"
+        placeholder="Kirjuta vastus kanalisse..."
+        style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #4b5563;background:#0b1220;color:#e5e7eb;"
+      />
+      <button
+        id="channelFallbackSend"
+        type="button"
+        style="padding:8px 10px;border-radius:8px;border:1px solid #4b5563;background:#1f2937;color:#e5e7eb;cursor:pointer;"
+      >
+        Saada
+      </button>
+    </div>
+  </div>
 
   <div id="messages">
     <div class="msg-wrap system">
@@ -563,34 +894,67 @@
     <div id="replyConfirmRow" class="reply-confirm-row" hidden>
       <span class="reply-confirm-label" id="replyConfirmLabel">Ohtlik tegevus</span>
       <div class="reply-confirm-btns">
-        <button type="button" class="reply-confirm-btn yes" id="replyConfirmYes">Jah</button>
-        <button type="button" class="reply-confirm-btn alt" id="replyConfirmAlt">Täpsusta</button>
-        <button type="button" class="reply-confirm-btn no" id="replyConfirmNo">Ei</button>
+        <button type="button" class="reply-confirm-btn yes" id="replyConfirmYes" title="Jah" aria-label="Jah">
+          J
+        </button>
+        <button type="button" class="reply-confirm-btn alt" id="replyConfirmAlt" title="Täpsusta" aria-label="Täpsusta">
+          ?
+        </button>
+        <button type="button" class="reply-confirm-btn no" id="replyConfirmNo" title="Ei" aria-label="Ei">
+          E
+        </button>
       </div>
     </div>
     <div id="voiceLiveRow" class="voice-live-row">
       <span class="voice-live-label" id="voiceLiveLabel">Hääl:</span>
       <span id="voiceLive" class="voice-live-text"></span>
     </div>
-    <div class="footer-input-row">
-      <button type="button" class="footer-round-btn" id="voiceClearBtn" title="Tühjenda tekstiväli">✕</button>
-      <div class="footer-input-center">
+    <div class="footer-compose" data-layout-rev="footer-v28">
+      <textarea id="input" rows="1" placeholder="Kirjuta siia..."></textarea>
+      <div class="footer-controls-row">
         <button
           type="button"
-          class="voice-btn"
-          id="voiceBtn"
-          aria-pressed="false"
-          title="Esimene puudutus = kuula; teine = peata. Pikk vajutus = keel et/ru."
+          class="footer-round-btn"
+          id="voiceClearBtn"
+          title="Tühjenda tekstiväli"
+          aria-label="Tühjenda tekstiväli"
         >
-          🎤
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+            />
+          </svg>
         </button>
-        <textarea id="input" rows="1" placeholder="Kirjuta siia..."></textarea>
+        <div class="footer-mic-slot">
+          <button
+            type="button"
+            class="voice-btn"
+            id="voiceBtn"
+            aria-pressed="false"
+            aria-label="Häälsisestus"
+            title="Puudutus = kuula või peata (ainult hääl)."
+          >
+            <svg
+              class="voice-btn-svg"
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                fill="currentColor"
+                d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3h-2c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V20h2v-2.08c3.39-.49 6-3.39 6-6.92z"
+              />
+            </svg>
+          </button>
+        </div>
+        <button id="send" type="button" aria-label="Saada">
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </button>
       </div>
-      <button id="send" type="button">
-        <svg width="18" height="18" viewBox="0 0 24 24">
-          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-        </svg>
-      </button>
     </div>
   </footer>
 
@@ -607,6 +971,145 @@
   </div>
 
   <script>
+    (function channelFallbackBoot() {
+      if (!('fetch' in window)) return;
+
+      var bar = document.getElementById('channelFallbackBar');
+      var textEl = document.getElementById('channelFallbackText');
+      var inputEl = document.getElementById('channelFallbackInput');
+      var sendEl = document.getElementById('channelFallbackSend');
+      if (!bar || !textEl || !inputEl || !sendEl) return;
+
+      var seen = {};
+      var lastShownId = 0;
+
+      function show(text, id) {
+        if (typeof id === 'number' && id > lastShownId) lastShownId = id;
+        textEl.textContent = text;
+        bar.hidden = false;
+      }
+
+      function pull() {
+        fetch('/api/chat/channel?after=0', { cache: 'no-store' })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(function (data) {
+            if (!data || !Array.isArray(data.messages)) return;
+            var latest = null;
+            for (var i = 0; i < data.messages.length; i += 1) {
+              var m = data.messages[i] || {};
+              var id = Number(m.id || 0);
+              var from = String(m.from || '');
+              var text = String(m.text || '').trim();
+              if (!id || !text || from === 'user') continue;
+              if (seen[id]) continue;
+              seen[id] = 1;
+              latest = { id: id, text: text };
+            }
+            if (latest && latest.id >= lastShownId) show(latest.text, latest.id);
+          })
+          .catch(function () {});
+      }
+
+      function sendReply() {
+        var text = String(inputEl.value || '').trim();
+        if (!text) return;
+        sendEl.disabled = true;
+        fetch('/api/chat/channel/user', {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text }),
+        })
+          .then(function () {
+            inputEl.value = '';
+            show('Vastus saadetud kanalisse.', lastShownId);
+          })
+          .catch(function () {
+            show('Kanali vastuse saatmine ebaõnnestus.', lastShownId);
+          })
+          .finally(function () {
+            sendEl.disabled = false;
+          });
+      }
+
+      sendEl.addEventListener('click', sendReply);
+      inputEl.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          sendReply();
+        }
+      });
+
+      pull();
+      setInterval(pull, 3000);
+    })();
+  </script>
+
+  <script>
+    (function bustStaleChatLayout() {
+      var rev = 'footer-v28-20260419';
+      var key = 'jarvisChatLayoutRev';
+      try {
+        if (localStorage.getItem(key) === rev) return;
+      } catch {
+        return;
+      }
+      function mark() {
+        try {
+          localStorage.setItem(key, rev);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (!('serviceWorker' in navigator)) {
+        mark();
+        return;
+      }
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        var hasCaches = window.caches && typeof caches.keys === 'function';
+        if (!regs.length && !hasCaches) {
+          mark();
+          return;
+        }
+        mark();
+        return Promise.all(regs.map(function (r) {
+          return r.unregister();
+        })).then(function () {
+          if (!hasCaches) return undefined;
+          return caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) {
+              return caches.delete(k);
+            }));
+          });
+        }).then(function () {
+          window.location.reload();
+        }).catch(function () {
+          window.location.reload();
+        });
+      }).catch(function () {
+        mark();
+      });
+    })();
+
+    (function enforceHttpsOutsideLocalhost() {
+      try {
+        var host = String(window.location.hostname || '').toLowerCase();
+        var isLocal = host === 'localhost' || host === '127.0.0.1';
+        if (!isLocal && window.location.protocol === 'http:') {
+          window.location.replace(
+            'https://' + window.location.host + window.location.pathname + window.location.search + window.location.hash,
+          );
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+
+    const VOICE_SVG_MIC =
+      '<svg class="voice-btn-svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3h-2c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V20h2v-2.08c3.39-.49 6-3.39 6-6.92z"/></svg>';
+    const VOICE_SVG_STOP =
+      '<svg class="voice-btn-svg" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6 6h12v12H6z"/></svg>';
+
     const messagesEl = document.getElementById('messages');
     const inputEl = document.getElementById('input');
     const sendBtn = document.getElementById('send');
@@ -616,14 +1119,28 @@
     const confirmLabelEl = document.getElementById('confirmLabel');
     const confirmYesEl = document.getElementById('confirmYes');
     const confirmNoEl = document.getElementById('confirmNo');
+    const speechLangWrap = document.getElementById('speechLangWrap');
+    const speechLangTrack = document.getElementById('speechLangTrack');
+    const speechLabelRu = document.getElementById('speechLabelRu');
+    const speechLabelEt = document.getElementById('speechLabelEt');
     const soundToggleEl = document.getElementById('soundToggle');
     const pushToggleEl = document.getElementById('pushToggle');
     let history = [];
+    const CHANNEL_LAST_ID_KEY = 'jarvisChannelLastId';
+    const CHANNEL_SEEN_IDS_KEY = 'jarvisChannelSeenIdsV1';
+    const CHANNEL_FORCE_REPLAY_KEY = 'jarvisChannelForceReplayV1';
+    let channelLastId = Number(localStorage.getItem(CHANNEL_LAST_ID_KEY) || '0') || 0;
+    let channelSeenIds = new Set();
+    let channelPollTick = 0;
     let pendingRequestId = null;
     let lastNotifiedPendingId = null;
     let soundEnabled = localStorage.getItem('jarvisSoundEnabled') === '1';
     let audioCtx = null;
     let pushEnabled = localStorage.getItem('jarvisPushEnabled') === '1';
+    let pushAutoRepairInFlight = false;
+    const CHAT_CACHE_KEY = 'jarvisChatMessagesV1';
+    const CHAT_CACHE_LIMIT = 120;
+    let chatMessages = [];
     const calAlarmEl = document.getElementById('calAlarm');
     const calAlarmCardEl = document.getElementById('calAlarmCard');
     const calAlarmEyebrowEl = document.getElementById('calAlarmEyebrow');
@@ -646,9 +1163,55 @@
     const voiceClearBtnEl = document.getElementById('voiceClearBtn');
     let speechLang = localStorage.getItem('jarvisSpeechLang') || 'et-EE';
     let speechRecognition = null;
-    let suppressVoiceClick = false;
     let voiceMaxTimer = null;
     let voiceUiActive = false;
+
+    function lockComposeKeyboard() {
+      if (!inputEl) return;
+      inputEl.disabled = false;
+      try {
+        inputEl.blur();
+      } catch {
+        /* ignore */
+      }
+    }
+
+    function unlockComposeForTyping() {
+      if (!inputEl) return;
+      inputEl.disabled = false;
+      try {
+        inputEl.focus({ preventScroll: true });
+      } catch {
+        try {
+          inputEl.focus();
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    (function suppressIosIconMenus() {
+      [
+        voiceBtnEl,
+        voiceClearBtnEl,
+        sendBtn,
+        replyConfirmYesEl,
+        replyConfirmAltEl,
+        replyConfirmNoEl,
+        confirmYesEl,
+        confirmNoEl,
+        speechLangTrack,
+        speechLabelRu,
+        speechLabelEt,
+        soundToggleEl,
+        pushToggleEl,
+      ].forEach((el) => {
+        if (!el) return;
+        el.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+        });
+      });
+    })();
 
     function setVoiceLiveRowOn(on) {
       if (voiceLiveRowEl) voiceLiveRowEl.classList.toggle('is-on', on);
@@ -663,11 +1226,12 @@
       if (voiceBtnEl) {
         voiceBtnEl.classList.remove('listening');
         voiceBtnEl.setAttribute('aria-pressed', 'false');
-        voiceBtnEl.textContent = '🎤';
+        voiceBtnEl.innerHTML = VOICE_SVG_MIC;
       }
       if (voiceLiveEl) voiceLiveEl.textContent = '';
       if (voiceLiveLabelEl) voiceLiveLabelEl.textContent = 'Hääl:';
       setVoiceLiveRowOn(false);
+      lockComposeKeyboard();
     }
 
     function forceStopVoice() {
@@ -675,6 +1239,7 @@
         finishVoiceUi();
         return;
       }
+      voiceUiActive = false;
       try {
         speechRecognition.stop();
       } catch {
@@ -704,7 +1269,7 @@
         if (voiceBtnEl) {
           voiceBtnEl.classList.add('listening');
           voiceBtnEl.setAttribute('aria-pressed', 'true');
-          voiceBtnEl.textContent = '⏹';
+          voiceBtnEl.innerHTML = VOICE_SVG_STOP;
         }
         if (voiceLiveLabelEl) voiceLiveLabelEl.textContent = 'Kuulan…';
         if (voiceLiveEl) voiceLiveEl.textContent = '';
@@ -712,7 +1277,7 @@
         speechRecognition.start();
         voiceMaxTimer = setTimeout(() => {
           forceStopVoice();
-          addMsg('assistant', 'Hääl peatatud automaatselt (45 s). Vajuta 🎤 uuesti, kui vaja.');
+          addMsg('assistant', 'Hääl peatatud automaatselt (45 s). Vajuta häälnuppu uuesti, kui vaja.');
         }, 45000);
       } catch {
         finishVoiceUi();
@@ -727,43 +1292,79 @@
     }
 
     /**
-     * Jah/Ei riba ainult ohtlike / tagasipöörmatute tegevuste puhul (masskustutus, terve päev jne).
-     * Lihtne lisamine / meeldetuletus ei tohiks siia sattuda.
+     * Kalendri ainult lugemine / küsimine — ei tohi avada Jah/Ei ohtlikkuse riba.
+     * (Nt «все события 17-го», «terve päeva sündmused», «mis on kalendris» polnud kustutus.)
+     */
+    function calendarMessageLooksLikeReadOnlyInfoQuery(text) {
+      const lower = (text || '').toLowerCase();
+      if (lower.length < 5) return false;
+      if (
+        /\b(kustut|tühjend|eemald\w*\s+kõik|удал|очист(ить|и)\s+(весь|все|день)|delete\s+all|empty\s+the|tühjenda\s+kõik|massi\s*kustut|массов\w*\s*удал)\b/i.test(
+          lower,
+        )
+      ) {
+        return false;
+      }
+      return (
+        /\b(покажи|посмотри|список|какие|что\s+(в|на)|расскажи|скажи|узнай|записи|запись|записей|информац|прочитай|в\s+календар|по\s+календар|loetle|näita|mis\s+on|millised|kuupäev|kuupäeval|vaata|arvuta|tell\s+me|show|list|what\s+('?s)?\s*(on|in|scheduled))\b/i.test(
+          lower,
+        ) ||
+        /\b(числа?|апрел|мая|июн).{0,40}(событ|запис|календар)/i.test(lower) ||
+        /\b(mis\s+sündmused|mis\s+juhtub|kalendris\s+on)\b/i.test(lower)
+      );
+    }
+
+    /**
+     * Masskalendri kustutus / terve päev tühjaks — et, ru, en, es (kasutaja või assistendi tekst).
+     * EI kaasa «все события» ainult loetlemisel ega «terve päev» ilma tühjendamiseta.
+     */
+    function messageImpliesCalendarMassDestructiveIntent(text) {
+      const raw = (text || '').trim();
+      if (raw.length < 8) return false;
+      const lower = raw.toLowerCase();
+      if (calendarMessageLooksLikeReadOnlyInfoQuery(raw)) {
+        return false;
+      }
+      return (
+        (/\b(kustut|eemald|tühjend|delete|remove|borrar|eliminar|vac[ií]ar|удал|очистить)\w*/i.test(lower) &&
+          /\b(kõik|terve|päev|все|всё|цел(ый|ая)|день|events?|sündmus|событ)/i.test(lower)) ||
+        /\b(terve|цел(ый|ая))\s+(päev|день).{0,50}(tühi|tühjaks|kustut|пуст|удал|empty)/i.test(lower) ||
+        /(päev|день).{0,45}(tühi|tühjaks|пустым|пустой|empty)/i.test(lower) ||
+        /(чтобы|et).{0,50}(päev|день).{0,30}(tühi|пустым|пуст)/i.test(lower) ||
+        /\b(удал|к\s+удалению|надо\s+удал).{0,90}(все|всех|всё|kõik).{0,50}(события|sündmused|events?)\b/i.test(lower) ||
+        /\b(kustut|tühjenda).{0,70}(kõik|terve|все|всё).{0,40}(sündmus|событ|päev|день)?/i.test(lower) ||
+        /очист(ить|и).{0,25}(день|календар|päev)/i.test(lower) ||
+        /очист(ить|и)\s+весь/i.test(lower) ||
+        /(massi|массов).{0,18}(kustut|удал)/i.test(lower) ||
+        /\b(delete|bulk)\s+all\b/i.test(lower)
+      );
+    }
+
+    /**
+     * Jah/Ei riba: masskustutus, terve päev jne. Kasutaja sõnumist VÕI assistendi vastusest
+     * (kui assistent ei kasutanud õigeid sõnu, tuvastab kasutaja käsu ikkagi).
      */
     function assistantMessageRequiresDestructiveConfirm(text) {
       const raw = (text || '').trim();
-      if (raw.length < 28) return false;
+      if (raw.length < 12) return false;
       const lower = raw.toLowerCase();
 
       if (
         /meeldetulet(us|use)|lisa(da)?\s+kalendrisse|uus\s+sündmus|üks(iks)?\s+sündmus/i.test(lower) &&
-        !/(kustut|eemald|tühj|kõik\s+(need\s+)?sündmused|terve\s+päev)/i.test(lower)
+        !/(kustut|eemald|tühj|kõik\s+(need\s+)?sündmused|terve\s+päev|удал|все\s+событ|пуст)/i.test(lower)
       ) {
         return false;
       }
 
-      const risky =
-        /kustut(a|aksin|ada|an)?\b.*\b(kõik|terve|päeva|päeval|mitu|kuupäev)/i.test(lower) ||
-        /eemald(a|aksin)?\b.*\b(kõik|kõik\s+need|terve)/i.test(lower) ||
-        /\b(kõik|terve)\s+(need\s+)?sündmused\b/i.test(lower) ||
-        /tühjenda.*kalend|kalendri?\s+tühj/i.test(lower) ||
-        /massi(kustutus|iline)?|korraga\s+kõik/i.test(lower) ||
-        /\b(delete|bulk)\b.*\b(all|day|events)/i.test(lower) ||
-        /удалить\s+(все|всё)|очистить\s+календар|все\s+события/i.test(raw);
-
-      if (!risky) return false;
-
-      const asks =
-        /\?\s*$/.test(raw) ||
-        /\bkas\s+(soovid|kinnitad|tohin|võin|tõesti)\b/i.test(lower) ||
-        /хотите|подтверж/i.test(raw);
-
-      return asks;
+      return messageImpliesCalendarMassDestructiveIntent(text);
     }
 
-    function showReplyConfirmIfNeeded(assistantText) {
+    function showReplyConfirmIfNeeded(assistantText, userText) {
       if (!replyConfirmRowEl) return;
-      if (!assistantMessageRequiresDestructiveConfirm(assistantText)) {
+      const userT = typeof userText === 'string' ? userText : '';
+      const fromUser = messageImpliesCalendarMassDestructiveIntent(userT);
+      const fromAssistant = assistantMessageRequiresDestructiveConfirm(assistantText);
+      if (!fromUser && !fromAssistant) {
         hideReplyConfirm();
         return;
       }
@@ -814,65 +1415,294 @@
         }
       };
       r.onend = () => {
-        finishVoiceUi();
-        const next = initSpeechRecognition();
-        if (next) {
-          speechRecognition = next;
+        if (!voiceUiActive) {
+          finishVoiceUi();
+          speechRecognition = initSpeechRecognition();
+          return;
+        }
+        try {
+          r.start();
+        } catch {
+          finishVoiceUi();
+          speechRecognition = initSpeechRecognition();
         }
       };
       return r;
     }
 
     speechRecognition = initSpeechRecognition();
-    function cycleSpeechLang() {
-      speechLang = speechLang === 'et-EE' ? 'ru-RU' : 'et-EE';
-      localStorage.setItem('jarvisSpeechLang', speechLang);
-      if (voiceBtnEl) {
-        voiceBtnEl.title = `Häälkäsk (${speechLang}). Pikk vajutus (või paremklõps) = vaheta eesti ↔ vene.`;
+
+    function syncSpeechLangUi() {
+      if (speechLangWrap) {
+        speechLangWrap.classList.toggle('speech-lang--ru', speechLang === 'ru-RU');
+        speechLangWrap.classList.toggle('speech-lang--et', speechLang === 'et-EE');
       }
-      addMsg(
-        'assistant',
-        `Hääle tuvastus: ${speechLang === 'et-EE' ? 'eesti (et-EE)' : 'vene (ru-RU)'}. Vihje: brauseri Web Speech ei taga 100% keelt — teksti saad alati käsitsi parandada.`,
-      );
+      if (speechLangTrack) {
+        speechLangTrack.setAttribute('aria-checked', speechLang === 'et-EE' ? 'true' : 'false');
+      }
+      if (voiceBtnEl) {
+        const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+        const iosNoteEt =
+          ios
+            ? ' iOS küsib mikrofoniluba (süsteemi aken) — seda ei saa veebis ära jätta; lubage üks kord.'
+            : '';
+        const iosNoteRu =
+          ios
+            ? ' iOS спрашивает доступ к микрофону (системное окно) — сайт не может убрать это; один раз нажмите «Разрешить».'
+            : '';
+        voiceBtnEl.title =
+          speechLang === 'ru-RU'
+            ? `Нажмите для диктовки. Язык: RU ↔ ET сверху.${iosNoteRu}`
+            : `Puudutus = alusta kuulamist või peata. Keele lüliti: RU ← → ET ülal.${iosNoteEt}`;
+      }
     }
-    if (voiceBtnEl) {
-      voiceBtnEl.title = `Häälkäsk (${speechLang}). Pikk vajutus = vaheta eesti ↔ vene.`;
+
+    function setSpeechLang(next) {
+      if (next !== 'et-EE' && next !== 'ru-RU') return;
+      speechLang = next;
+      localStorage.setItem('jarvisSpeechLang', speechLang);
+      syncSpeechLangUi();
+    }
+
+    if (speechLangTrack) {
+      speechLangTrack.addEventListener('click', () => {
+        setSpeechLang(speechLang === 'ru-RU' ? 'et-EE' : 'ru-RU');
+      });
+    }
+    if (speechLabelRu) {
+      speechLabelRu.addEventListener('click', () => setSpeechLang('ru-RU'));
+    }
+    if (speechLabelEt) {
+      speechLabelEt.addEventListener('click', () => setSpeechLang('et-EE'));
     }
 
     function formatMsgTime(d = new Date()) {
-      return d.toLocaleString('et-EE', { dateStyle: 'short', timeStyle: 'short' });
+      const value = d instanceof Date ? d : new Date(d);
+      return value.toLocaleString('et-EE', { dateStyle: 'short', timeStyle: 'short' });
     }
 
-    function addMsg(role, text) {
+    function saveChatMessages() {
+      try {
+        localStorage.setItem(CHAT_CACHE_KEY, JSON.stringify(chatMessages.slice(-CHAT_CACHE_LIMIT)));
+      } catch {
+        // ignore localStorage failures
+      }
+    }
+
+    function renderMsg(role, text, at = new Date(), initialStatus = null) {
       const wrap = document.createElement('div');
       wrap.className = `msg-wrap ${role}`;
       const timeEl = document.createElement('span');
       timeEl.className = 'msg-time';
-      timeEl.textContent = formatMsgTime();
+      timeEl.textContent = formatMsgTime(at);
       const div = document.createElement('div');
       div.className = `msg ${role}`;
       div.textContent = text;
       wrap.appendChild(timeEl);
+      if (role === 'user') {
+        const statusEl = document.createElement('span');
+        statusEl.className = 'msg-status';
+        if (initialStatus) {
+          statusEl.setAttribute('data-state', initialStatus);
+          statusEl.textContent = initialStatus === 'done' ? '✓' : initialStatus === 'error' ? '✕' : '';
+          wrap.setAttribute('data-status', initialStatus);
+        }
+        wrap.appendChild(statusEl);
+      }
       wrap.appendChild(div);
       messagesEl.insertBefore(wrap, typingEl);
       messagesEl.scrollTop = messagesEl.scrollHeight;
+      return wrap;
     }
 
+    function setWrapStatus(wrap, state) {
+      if (!wrap) return;
+      wrap.setAttribute('data-status', state);
+      const statusEl = wrap.querySelector('.msg-status');
+      if (!statusEl) return;
+      statusEl.setAttribute('data-state', state);
+      if (state === 'done') statusEl.textContent = '✓';
+      else if (state === 'error') statusEl.textContent = '✕';
+      else statusEl.textContent = '';
+    }
+
+    function loadCachedMessages() {
+      try {
+        const raw = localStorage.getItem(CHAT_CACHE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) return;
+        chatMessages = parsed
+          .filter((x) => x && typeof x.role === 'string' && typeof x.text === 'string')
+          .slice(-CHAT_CACHE_LIMIT);
+        if (chatMessages.length === 0) return;
+        messagesEl.querySelectorAll('.msg-wrap').forEach((el) => el.remove());
+        for (const msg of chatMessages) {
+          renderMsg(msg.role, msg.text, msg.at || new Date());
+        }
+        history = chatMessages
+          .filter((msg) => msg.role === 'user' || msg.role === 'assistant')
+          .map((msg) => ({ role: msg.role, content: msg.text }))
+          .slice(-20);
+      } catch {
+        // ignore malformed cache
+      }
+    }
+
+    function addMsg(role, text, options = {}) {
+      const item = { role, text, at: new Date().toISOString() };
+      chatMessages.push(item);
+      if (chatMessages.length > CHAT_CACHE_LIMIT) chatMessages = chatMessages.slice(-CHAT_CACHE_LIMIT);
+      saveChatMessages();
+      const initialStatus = role === 'user' && options.status ? options.status : role === 'user' ? 'done' : null;
+      return renderMsg(role, text, item.at, initialStatus);
+    }
+
+    function loadChannelSeenIds() {
+      try {
+        const raw = localStorage.getItem(CHANNEL_SEEN_IDS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) return;
+        channelSeenIds = new Set(
+          parsed
+            .map((v) => Number(v))
+            .filter((v) => Number.isFinite(v))
+            .slice(-300),
+        );
+      } catch {
+        channelSeenIds = new Set();
+      }
+    }
+
+    function saveChannelSeenIds() {
+      try {
+        const arr = Array.from(channelSeenIds).slice(-300);
+        localStorage.setItem(CHANNEL_SEEN_IDS_KEY, JSON.stringify(arr));
+      } catch {
+        // ignore localStorage issues
+      }
+    }
+
+    function markChannelSeen(id) {
+      if (!Number.isFinite(id)) return;
+      channelSeenIds.add(id);
+      if (channelSeenIds.size > 400) {
+        const arr = Array.from(channelSeenIds).slice(-300);
+        channelSeenIds = new Set(arr);
+      }
+      saveChannelSeenIds();
+    }
+
+    function saveChannelLastId(value) {
+      channelLastId = Number.isFinite(value) ? value : channelLastId;
+      try {
+        localStorage.setItem(CHANNEL_LAST_ID_KEY, String(channelLastId));
+      } catch {
+        // ignore localStorage issues
+      }
+    }
+
+    async function pollServerChannel() {
+      try {
+        channelPollTick += 1;
+        const replayMode = localStorage.getItem(CHANNEL_FORCE_REPLAY_KEY) !== '0';
+        const resync = replayMode || channelPollTick % 12 === 0;
+        const after = resync ? 0 : channelLastId;
+        const res = await fetch(`/api/chat/channel?after=${encodeURIComponent(String(after))}`, {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        const items = Array.isArray(data?.messages) ? data.messages : [];
+        if (items.length === 0) return;
+
+        for (const item of items) {
+          const text = String(item?.text ?? '').trim();
+          const id = Number(item?.id ?? 0);
+          const from = String(item?.from ?? '').trim();
+          if (!text || !Number.isFinite(id) || channelSeenIds.has(id)) continue;
+          if (from === 'user') {
+            markChannelSeen(id);
+            saveChannelLastId(id);
+            continue;
+          }
+          addMsg('assistant', text);
+          history.push({ role: 'assistant', content: text });
+          if (history.length > 20) history = history.slice(-20);
+          markChannelSeen(id);
+          saveChannelLastId(id);
+        }
+        if (replayMode && items.length > 0) {
+          localStorage.setItem(CHANNEL_FORCE_REPLAY_KEY, '0');
+        }
+        forceScrollToLatestWithRetries();
+      } catch {
+        // silent: channel polling must not spam UI with errors
+      }
+    }
+
+    function scrollToLatestMessage() {
+      if (!messagesEl) return;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function forceScrollToLatestWithRetries() {
+      const delays = [0, 120, 400, 900];
+      for (const delay of delays) {
+        window.setTimeout(scrollToLatestMessage, delay);
+      }
+    }
+
+    loadCachedMessages();
+    loadChannelSeenIds();
+    if (!localStorage.getItem(CHANNEL_FORCE_REPLAY_KEY)) {
+      localStorage.setItem(CHANNEL_FORCE_REPLAY_KEY, '1');
+    }
     const greetingTimeEl = document.getElementById('greetingTime');
-    if (greetingTimeEl) {
+    if (greetingTimeEl && chatMessages.length === 0) {
       greetingTimeEl.textContent = formatMsgTime();
     }
 
+    let _busyOnAt = 0;
+    let _busyOffTimer = null;
+    const MIN_BUSY_MS = 800;
     function setLoading(on) {
-      typingEl.style.display = on ? 'block' : 'none';
-      sendBtn.disabled = on;
-      inputEl.disabled = on;
-      if (voiceBtnEl) voiceBtnEl.disabled = on;
-      if (voiceClearBtnEl) voiceClearBtnEl.disabled = on;
-      if (on && voiceUiActive) {
-        forceStopVoice();
+      const progressBarEl = document.getElementById('progressBar');
+      const applyState = (state) => {
+        if (progressBarEl) progressBarEl.classList.toggle('on', Boolean(state));
+        document.body.classList.toggle('busy', Boolean(state));
+        typingEl.style.display = state ? 'block' : 'none';
+        sendBtn.disabled = Boolean(state);
+        inputEl.disabled = Boolean(state);
+        if (voiceBtnEl) voiceBtnEl.disabled = Boolean(state);
+        if (voiceClearBtnEl) voiceClearBtnEl.disabled = Boolean(state);
+        if (state && voiceUiActive) {
+          forceStopVoice();
+        }
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      };
+      if (on) {
+        if (_busyOffTimer) {
+          clearTimeout(_busyOffTimer);
+          _busyOffTimer = null;
+        }
+        _busyOnAt = Date.now();
+        applyState(true);
+        return;
       }
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      const elapsed = Date.now() - _busyOnAt;
+      const remainingMs = Math.max(0, MIN_BUSY_MS - elapsed);
+      if (_busyOffTimer) clearTimeout(_busyOffTimer);
+      _busyOffTimer = setTimeout(() => {
+        applyState(false);
+        _busyOffTimer = null;
+      }, remainingMs);
+    }
+
+    function setStatusLineText(text) {
+      const textEl = document.getElementById('statusLineText');
+      if (textEl) textEl.textContent = text;
+      else if (statusLineEl) statusLineEl.textContent = text;
     }
 
     function setConfirmUi(nextPendingId) {
@@ -880,9 +1710,7 @@
       const hasPending = Boolean(pendingRequestId);
       confirmBarEl.style.display = hasPending ? 'flex' : 'none';
       document.body.classList.toggle('pending', hasPending);
-      if (statusLineEl) {
-        statusLineEl.textContent = hasPending ? 'Ootan kinnitust' : 'Jarvise assistent';
-      }
+      setStatusLineText(hasPending ? 'Ootan kinnitust' : 'Jarvise assistent · ooteseis');
       if (hasPending) {
         confirmLabelEl.textContent = 'Ootan kinnitust…';
       }
@@ -1070,13 +1898,13 @@
     function updateSoundToggleUi() {
       if (!soundToggleEl) return;
       soundToggleEl.classList.toggle('on', soundEnabled);
-      soundToggleEl.textContent = soundEnabled ? 'Sound: ON' : 'Sound: OFF';
+      soundToggleEl.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
     }
 
     function updatePushToggleUi() {
       if (!pushToggleEl) return;
       pushToggleEl.classList.toggle('on', pushEnabled);
-      pushToggleEl.textContent = pushEnabled ? 'Push: ON' : 'Push: OFF';
+      pushToggleEl.setAttribute('aria-pressed', pushEnabled ? 'true' : 'false');
     }
 
     function urlBase64ToUint8Array(base64String) {
@@ -1088,29 +1916,71 @@
       return outputArray;
     }
 
-    async function enablePush() {
+    function isIosSafari() {
+      const ua = navigator.userAgent || '';
+      const isIos = /iPad|iPhone|iPod/.test(ua);
+      return isIos;
+    }
+
+    function isStandalonePwa() {
+      try {
+        if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+      } catch {
+        /* ignore */
+      }
+      return Boolean(navigator.standalone);
+    }
+
+    async function enablePush(opts = {}) {
+      const silent = Boolean(opts && opts.silent);
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-        addMsg('assistant', 'Push ei ole selles brauseris saadaval.');
+        if (!silent) {
+          if (isIosSafari() && !isStandalonePwa()) {
+            addMsg(
+              'assistant',
+              'iOS-is tuleb Robert enne Push aktiveerimist lisada avaekraanile: Safari → jaga-nupp → „Lisa avaekraanile”. Seejärel ava Robert avaekraanilt ja vajuta Push uuesti.',
+            );
+          } else {
+            addMsg('assistant', 'Push ei ole selles brauseris saadaval.');
+          }
+        }
+        return false;
+      }
+
+      if (isIosSafari() && !isStandalonePwa()) {
+        if (!silent) {
+          addMsg(
+            'assistant',
+            'iOS-is tuleb Robert enne Push aktiveerimist lisada avaekraanile: Safari → jaga-nupp → „Lisa avaekraanile”. Seejärel ava Robert avaekraanilt ja vajuta Push uuesti.',
+          );
+        }
         return false;
       }
 
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
-        addMsg('assistant', 'Push teavituste luba ei antud.');
+        if (!silent) addMsg('assistant', 'Push teavituste luba ei antud.');
         return false;
       }
 
+      const storedCode = localStorage.getItem('jarvisPushPairCode') || '';
       const code =
-        prompt(
-          'Pair code: kui .env-is on PUSH_PAIR_CODE, siis see lühike number; muidu kleebi terve JARVIS_BRIDGE_TOKEN.',
-        ) || '';
+        (silent
+          ? storedCode
+          : prompt(
+              'Pair code: kui .env-is on PUSH_PAIR_CODE, siis see lühike number; muidu kleebi terve JARVIS_BRIDGE_TOKEN.',
+            ) || '') || '';
       if (!code.trim()) return false;
 
-      const keyRes = await fetch('/api/push/public-key');
+      const keyRes = await fetch(`/api/push/public-key?ts=${Date.now()}`, {
+        method: 'GET',
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+      });
       const keyData = await keyRes.json().catch(() => null);
       const publicKey = keyData?.publicKey;
       if (!publicKey) {
-        addMsg('assistant', 'Push võtme päring ebaõnnestus.');
+        if (!silent) addMsg('assistant', 'Push võtme päring ebaõnnestus.');
         return false;
       }
 
@@ -1134,15 +2004,25 @@
       });
 
       if (!subscribeRes.ok) {
-        const t = await subscribeRes.text().catch(() => '');
-        addMsg('assistant', `Push subscribe ebaõnnestus (HTTP ${subscribeRes.status}). ${t}`.trim());
+        const subscribeJson = await subscribeRes.json().catch(() => null);
+        const errText =
+          (subscribeJson && (subscribeJson.error || subscribeJson.message)) ||
+          (await subscribeRes.text().catch(() => ''));
+        if (!silent) {
+          if (subscribeRes.status === 401 || String(errText).includes('PUSH_UNAUTHORIZED')) {
+            addMsg('assistant', 'Push ei lülitunud sisse: pair code on vale. Sisesta õige 6-kohaline PUSH_PAIR_CODE.');
+          } else {
+            addMsg('assistant', `Push subscribe ebaõnnestus (HTTP ${subscribeRes.status}). ${errText}`.trim());
+          }
+        }
         return false;
       }
 
       pushEnabled = true;
+      localStorage.setItem('jarvisPushPairCode', code.trim());
       localStorage.setItem('jarvisPushEnabled', '1');
       updatePushToggleUi();
-      addMsg('assistant', 'OK, push teavitused on sees.');
+      if (!silent) addMsg('assistant', 'OK, push teavitused on sees.');
       return true;
     }
 
@@ -1152,6 +2032,43 @@
       updatePushToggleUi();
       addMsg('assistant', 'Push lülitatud välja (subscription jääb serverisse alles).');
       return true;
+    }
+
+    async function runSilentChannelWatchdog() {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 6000);
+      try {
+        const healthRes = await fetch('/health', { cache: 'no-store', signal: controller.signal });
+        if (!healthRes.ok) return;
+        const pushRes = await fetch('/api/push/status', { cache: 'no-store', signal: controller.signal });
+        const pushData = await pushRes.json().catch(() => null);
+        const subscriptions = Number(pushData?.subscriptions ?? 0);
+        const vapidReady = Boolean(pushData?.vapidReady);
+        if (pushEnabled && vapidReady && subscriptions === 0 && !pushAutoRepairInFlight) {
+          pushAutoRepairInFlight = true;
+          try {
+            await enablePush({ silent: true });
+          } finally {
+            pushAutoRepairInFlight = false;
+          }
+        }
+      } catch {
+        // vaikselt ignore
+      } finally {
+        clearTimeout(tid);
+      }
+    }
+
+    async function autoEnablePushOnLaunch() {
+      const storedCode = (localStorage.getItem('jarvisPushPairCode') || '').trim();
+      if (!storedCode) return;
+      if (pushAutoRepairInFlight) return;
+      pushAutoRepairInFlight = true;
+      try {
+        await enablePush({ silent: true });
+      } finally {
+        pushAutoRepairInFlight = false;
+      }
     }
 
     async function confirmPending() {
@@ -1198,22 +2115,53 @@
       }
     }
 
+    function pickJarvisApiErrorMessage(data) {
+      if (!data || typeof data !== 'object') return 'Päring ebaõnnestus';
+      if (typeof data.message === 'string' && data.message.trim()) return data.message.trim();
+      if (typeof data.error === 'string' && data.error.trim()) return data.error.trim();
+      if (data.error && typeof data.error === 'object' && typeof data.error.message === 'string') {
+        return data.error.message.trim();
+      }
+      if (typeof data.reply === 'string' && data.reply.trim()) return data.reply.trim();
+      return 'Päring ebaõnnestus';
+    }
+
+    async function sendViaChannelFallback(text) {
+      const body = String(text || '').trim();
+      if (!body) return false;
+      try {
+        const res = await fetch('/api/chat/channel/user', {
+          method: 'POST',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: body }),
+        });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    }
+
     async function pingJarvisHealth() {
       if (!statusLineEl) return;
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 6000);
       try {
-        const res = await fetch('/health', { cache: 'no-store' });
+        const res = await fetch('/health', { cache: 'no-store', signal: controller.signal });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.status === 'ok') {
-          statusLineEl.textContent = 'Jarvise assistent · ühendus OK';
+          setStatusLineText('Jarvise assistent · ooteseis');
           statusLineEl.classList.remove('bad');
           statusLineEl.classList.add('ok');
           return;
         }
         throw new Error('bad health');
       } catch {
-        statusLineEl.textContent = 'Jarvise assistent · server ei vasta';
+        setStatusLineText('Jarvise assistent · server ei vasta');
         statusLineEl.classList.remove('ok');
         statusLineEl.classList.add('bad');
+      } finally {
+        clearTimeout(tid);
       }
     }
 
@@ -1243,13 +2191,13 @@
           addMsg('assistant', 'Ühenduse viga. Proovi uuesti.');
         } finally {
           setLoading(false);
-          inputEl.focus();
+          lockComposeKeyboard();
         }
 
         return;
       }
 
-      addMsg('user', text);
+      const userWrap = addMsg('user', text, { status: 'sending' });
       inputEl.value = '';
       inputEl.style.height = 'auto';
       setLoading(true);
@@ -1257,39 +2205,71 @@
       try {
         const res = await fetch('/api/chat', {
           method: 'POST',
+          cache: 'no-store',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text, history }),
+          body: JSON.stringify({
+            message: text,
+            history,
+            clientTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+            clientLocale: typeof navigator !== 'undefined' ? navigator.language || '' : '',
+            clientLocalCalendarDate: (() => {
+              const d = new Date();
+              return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            })(),
+          }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const errMsg =
-            (data && data.error && data.error.message) ||
-            data.message ||
-            data.reply ||
-            'Päring ebaõnnestus';
-          addMsg('assistant', `Viga (HTTP ${res.status}): ${errMsg}`);
+          const errMsg = pickJarvisApiErrorMessage(data);
+          // Kui AI-/võrgukiht vastab 5xx, ära kaota kasutaja sõnumit:
+          // kirjuta see varukanalisse ja anna "kätte saadud" vastus.
+          if (res.status >= 500) {
+            const backupOk = await sendViaChannelFallback(text);
+            if (backupOk) {
+              setWrapStatus(userWrap, 'done');
+              addMsg('assistant', 'Server andis 5xx, aga sinu sõnum saadeti varukanalisse ja on kätte saadud.');
+            } else {
+              setWrapStatus(userWrap, 'error');
+              addMsg('assistant', `Viga (HTTP ${res.status}): ${errMsg}`);
+            }
+          } else {
+            setWrapStatus(userWrap, 'error');
+            addMsg('assistant', `Viga (HTTP ${res.status}): ${errMsg}`);
+          }
           hideReplyConfirm();
         } else {
           const reply = data.reply || data.error || 'Viga';
+          setWrapStatus(userWrap, 'done');
           addMsg('assistant', reply);
-          showReplyConfirmIfNeeded(reply);
+          if (data.degraded) {
+            const errHint = data.error ? ` (${data.error})` : '';
+            addMsg('assistant', `Märkus: AI ühendus oli kõikuv, kasutasin varuvastust${errHint}.`);
+          }
+          showReplyConfirmIfNeeded(reply, text);
           history.push({ role: 'user', content: text });
           history.push({ role: 'assistant', content: reply });
           if (history.length > 20) history = history.slice(-20);
         }
       } catch {
-        addMsg('assistant', 'Ühenduse viga. Proovi uuesti.');
+        const backupOk = await sendViaChannelFallback(text);
+        if (backupOk) {
+          setWrapStatus(userWrap, 'done');
+          addMsg('assistant', 'Põhikanal katkes, aga sinu sõnum saadeti varukanalisse ja on kätte saadud.');
+        } else {
+          setWrapStatus(userWrap, 'error');
+          addMsg('assistant', 'Ühenduse viga. Proovi uuesti.');
+        }
         hideReplyConfirm();
       } finally {
         setLoading(false);
-        inputEl.focus();
+        lockComposeKeyboard();
       }
     }
 
     if (replyConfirmYesEl) {
       replyConfirmYesEl.addEventListener('click', () => {
         inputEl.value =
-          'Jah — kinnitan: vii see kustutamine või muudatus lõpuni täpselt nii, nagu ülal küsisid (kasuta kalendri tööriistu vastavalt kontekstile).';
+          'Jah — kinnitan. Palun täida kalendrist kustutamine lõpuni (õige kuupäev või id-d vastavalt eelmisele vestlusele); ära keela ega suuna mind käsitsi Google Calendarisse.';
         send();
       });
     }
@@ -1303,6 +2283,7 @@
     if (replyConfirmAltEl) {
       replyConfirmAltEl.addEventListener('click', () => {
         inputEl.placeholder = 'Kirjuta teine või täpsem soov; võid kasutada häälnuppu…';
+        unlockComposeForTyping();
         inputEl.focus();
         try {
           inputEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -1313,45 +2294,21 @@
     }
 
     if (voiceClearBtnEl) {
-      voiceClearBtnEl.addEventListener('click', () => {
+      voiceClearBtnEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        hideReplyConfirm();
+        if (voiceUiActive) {
+          forceStopVoice();
+        }
+        inputEl.placeholder = 'Kirjuta siia...';
         inputEl.value = '';
         inputEl.style.height = 'auto';
-        inputEl.dispatchEvent(new Event('input'));
-        inputEl.focus();
+        lockComposeKeyboard();
       });
     }
 
     if (voiceBtnEl) {
-      let voiceLongTimer = null;
-      const clearVoiceLong = () => {
-        if (voiceLongTimer) {
-          clearTimeout(voiceLongTimer);
-          voiceLongTimer = null;
-        }
-      };
-      voiceBtnEl.addEventListener('touchstart', () => {
-        if (voiceUiActive) return;
-        clearVoiceLong();
-        voiceLongTimer = setTimeout(() => {
-          voiceLongTimer = null;
-          suppressVoiceClick = true;
-          setTimeout(() => {
-            suppressVoiceClick = false;
-          }, 450);
-          cycleSpeechLang();
-          try {
-            navigator.vibrate?.(15);
-          } catch {}
-        }, 650);
-      }, { passive: true });
-      voiceBtnEl.addEventListener('touchend', clearVoiceLong);
-      voiceBtnEl.addEventListener('touchcancel', clearVoiceLong);
-      voiceBtnEl.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (!voiceUiActive) cycleSpeechLang();
-      });
       voiceBtnEl.addEventListener('click', () => {
-        if (suppressVoiceClick) return;
         if (voiceBtnEl.disabled) return;
         if (voiceUiActive) {
           forceStopVoice();
@@ -1401,13 +2358,55 @@
       inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
     });
 
-    inputEl.focus();
+    (function wireComposeKeyboardGate() {
+      function onComposeFieldActivate() {
+        unlockComposeForTyping();
+        setTimeout(() => {
+          try {
+            inputEl.focus({ preventScroll: true });
+          } catch {
+            try {
+              inputEl.focus();
+            } catch {
+              /* ignore */
+            }
+          }
+        }, 0);
+      }
+      inputEl.addEventListener('touchend', onComposeFieldActivate, { passive: true });
+      inputEl.addEventListener('click', onComposeFieldActivate);
+      inputEl.addEventListener('focus', onComposeFieldActivate);
+    })();
+
+    lockComposeKeyboard();
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    requestAnimationFrame(forceScrollToLatestWithRetries);
+    window.addEventListener('pageshow', () => {
+      requestAnimationFrame(forceScrollToLatestWithRetries);
+    });
+    window.addEventListener('load', () => {
+      forceScrollToLatestWithRetries();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        requestAnimationFrame(forceScrollToLatestWithRetries);
+      }
+    });
+
     pingJarvisHealth();
     setInterval(pingJarvisHealth, 45000);
+    runSilentChannelWatchdog();
+    setInterval(runSilentChannelWatchdog, 75000);
+    autoEnablePushOnLaunch();
     updateSoundToggleUi();
     updatePushToggleUi();
+    syncSpeechLangUi();
     refreshPending();
     setInterval(refreshPending, 2000);
+    pollServerChannel();
+    setInterval(pollServerChannel, 2500);
 
     if (calAlarmYesEl) calAlarmYesEl.addEventListener('click', () => postCalendarAlarmAck('dismiss'));
     if (calAlarmNoEl) calAlarmNoEl.addEventListener('click', () => postCalendarAlarmAck('snooze'));

@@ -6,18 +6,88 @@ export type MakeWebhookPayload = Record<string, unknown>;
 
 const MAX_MAKE_WEBHOOK_ATTEMPTS = 3;
 
-function isRetryableMakeFailure(status: number): boolean {
-  if (status === 0) {
-    return true;
+export type MakeFailureKind =
+  | 'network_or_timeout'
+  | 'queue_full'
+  | 'rate_limited'
+  | 'upstream_5xx'
+  | 'not_found_or_gone'
+  | 'bad_request'
+  | 'unknown';
+
+export function classifyMakeFailure(
+  status: number,
+  errorBody: string,
+): { retryable: boolean; kind: MakeFailureKind; recommendation: string } {
+  const lower = errorBody.toLowerCase();
+  const queueFull =
+    lower.includes('queue is full') || lower.includes('queue full') || lower.includes('webhook queue');
+
+  if (status === 0 || status === 408) {
+    return {
+      retryable: true,
+      kind: 'network_or_timeout',
+      recommendation: 'Ajutine ühenduse või timeout probleem; proovi uuesti.',
+    };
   }
-  if (status === 408 || status === 429) {
-    return true;
+  if (status === 429) {
+    return {
+      retryable: true,
+      kind: 'rate_limited',
+      recommendation: 'Make rate limit; vähenda sagedust või oota ja proovi uuesti.',
+    };
   }
-  return status >= 500 && status <= 599;
+  if (status >= 500 && status <= 599) {
+    return {
+      retryable: true,
+      kind: 'upstream_5xx',
+      recommendation: 'Make serveri ajutine viga; proovi uuesti.',
+    };
+  }
+  if (status === 400 && queueFull) {
+    return {
+      retryable: true,
+      kind: 'queue_full',
+      recommendation: 'Make queue on täis; puhasta incomplete executions ja kontrolli limiite.',
+    };
+  }
+  if (status === 404 || status === 410) {
+    return {
+      retryable: false,
+      kind: 'not_found_or_gone',
+      recommendation: 'Webhook URL puudub või on aegunud; kontrolli MAKE_WEBHOOK_URL.',
+    };
+  }
+  if (status >= 400 && status <= 499) {
+    return {
+      retryable: false,
+      kind: 'bad_request',
+      recommendation: 'Kontrolli payloadi ja Make stsenaariumi filtri/routeri tingimusi.',
+    };
+  }
+  return {
+    retryable: false,
+    kind: 'unknown',
+    recommendation: 'Tundmatu vastus; kontrolli Make history logi.',
+  };
+}
+
+/** Make võib anda 400 koos «Queue is full» — ajutine järjekord, mitte vale päring. */
+function isRetryableMakeFailure(status: number, errorBody: string): boolean {
+  return classifyMakeFailure(status, errorBody).retryable;
 }
 
 function backoffMsAfterAttempt(attemptIndex: number): number {
   return 400 * Math.pow(2, attemptIndex);
+}
+
+function computeRetryPolicy(status: number, errorBody: string): { maxAttempts: number; waitMs: number } {
+  const classified = classifyMakeFailure(status, errorBody);
+  if (classified.kind === 'queue_full') {
+    // Queue-full puhul lisakatsed suurendavad survet; piirdume ühe lisakatsega.
+    return { maxAttempts: 2, waitMs: 2_000 };
+  }
+  return { maxAttempts: MAX_MAKE_WEBHOOK_ATTEMPTS, waitMs: -1 };
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -49,10 +119,19 @@ export async function sendJarvisMakePayload(
 
   let result = await sendMakeWebhook(url, body);
 
-  for (let attempt = 1; attempt < MAX_MAKE_WEBHOOK_ATTEMPTS && !result.ok && isRetryableMakeFailure(result.status); attempt++) {
-    const waitMs = backoffMsAfterAttempt(attempt - 1);
+  for (let attempt = 1; attempt < MAX_MAKE_WEBHOOK_ATTEMPTS; attempt++) {
+    if (result.ok || !isRetryableMakeFailure(result.status, result.error)) break;
+    const policy = computeRetryPolicy(result.status, result.error);
+    if (attempt >= policy.maxAttempts) break;
+    const waitMs = policy.waitMs >= 0 ? policy.waitMs : backoffMsAfterAttempt(attempt - 1);
     logger.info(
-      { operation: 'make.webhook.retry', attempt, waitMs, lastStatus: result.status },
+      {
+        operation: 'make.webhook.retry',
+        attempt,
+        waitMs,
+        lastStatus: result.status,
+        failureKind: classifyMakeFailure(result.status, result.error).kind,
+      },
       'Make webhook retry',
     );
     await sleep(waitMs);
@@ -60,11 +139,15 @@ export async function sendJarvisMakePayload(
   }
 
   if (!result.ok) {
+    const classified = classifyMakeFailure(result.status, result.error);
     appendFailedMakeRecord({
       at: new Date().toISOString(),
       payload: body,
       upstreamStatus: result.status,
       error: result.error,
+      retryable: classified.retryable,
+      failureKind: classified.kind,
+      recommendation: classified.recommendation,
     });
   }
 

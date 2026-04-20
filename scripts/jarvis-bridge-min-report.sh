@@ -1,7 +1,13 @@
 #!/bin/sh
 set -eu
 
-URL="$(grep -oE 'https://[a-zA-Z0-9.-]+trycloudflare\.com' /tmp/jarvis-cloudflared.log 2>/dev/null | tail -n 1 || true)"
+URL="${JARVIS_PUBLIC_URL:-}"
+if [ -z "${URL:-}" ]; then
+  URL="$(grep -hEo 'https?://[a-zA-Z0-9.-]+' /Users/kait/.pm2/logs/cloudflared-error.log 2>/dev/null | grep -Ev 'localhost|127\\.0\\.0\\.1' | tail -n 1 || true)"
+fi
+if [ -z "${URL:-}" ]; then
+  URL="$(grep -oE 'https://[a-zA-Z0-9.-]+trycloudflare\.com' /tmp/jarvis-cloudflared.log 2>/dev/null | tail -n 1 || true)"
+fi
 if [ -z "${URL:-}" ]; then
   URL="$(ps -Ao command | grep -E 'cloudflared|trycloudflare' | grep -v grep | grep -oE 'https://[a-zA-Z0-9.-]+trycloudflare\.com' | tail -n 1 || true)"
 fi

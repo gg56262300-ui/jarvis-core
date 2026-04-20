@@ -13,6 +13,7 @@
     "test:gmail-v2": "sh ./scripts/test-gmail-v2.sh",
     "test:gmail-v3": "sh ./scripts/test-gmail-v3.sh",
     "health": "./scripts/health-check.sh",
+    "channel:check": "sh ./scripts/jarvis-channel-check.sh",
     "health:baseline": "./scripts/health-baseline-check.sh",
     "backup": "sh ./scripts/backup-jarvis.sh",
     "autocheck:once": "node --env-file=.env scripts/jarvis-autocheck.mjs",
@@ -98,6 +99,7 @@
     "objektijuht": "node scripts/objektijuht.mjs",
     "projektijuht": "node scripts/projektijuht.mjs",
     "check:calendar-local": "./scripts/calendar-self-check.sh",
+    "check:make-health": "./scripts/make-health-check.sh",
     "n8n:jarvis": "node scripts/n8n-jarvis-webhook.mjs",
     "check:jarvis-health": "./scripts/jarvis-health-auto.sh",
     "check:mac-load": "./scripts/mac-load-auto.sh"

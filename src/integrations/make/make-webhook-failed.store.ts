@@ -10,6 +10,16 @@ export type FailedMakeRecord = {
   payload: Record<string, unknown>;
   upstreamStatus: number;
   error: string;
+  retryable?: boolean;
+  failureKind?:
+    | 'network_or_timeout'
+    | 'queue_full'
+    | 'rate_limited'
+    | 'upstream_5xx'
+    | 'not_found_or_gone'
+    | 'bad_request'
+    | 'unknown';
+  recommendation?: string;
 };
 
 export function appendFailedMakeRecord(record: FailedMakeRecord): void {

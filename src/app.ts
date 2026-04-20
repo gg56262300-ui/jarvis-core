@@ -17,6 +17,7 @@ import { registerTimeModule } from './time/index.js';
 import { registerVoiceModule } from './voice/index.js';
 import { registerWhatsappModule } from './whatsapp/index.js';
 import { registerWeatherModule } from './weather/index.js';
+import { registerAgentInboxModule } from './agent-inbox/index.js';
 import { registerChatModule } from './chat/index.js';
 import { registerDebugRoutes } from './debug/index.js';
 import { registerPushModule } from './push/index.js';
@@ -38,7 +39,19 @@ export const buildApp = () => {
   // Vaikimisi express.json() limiit on ~100kb; voice audio base64 ületab selle enne /api/voice/audio-turn rada.
   app.use(express.json({ limit: '20mb' }));
   app.use(httpLogger);
-  app.use(express.static(publicDirectory));
+  app.use(
+    express.static(publicDirectory, {
+      setHeaders: (res, filePath) => {
+        const name = path.basename(filePath).toLowerCase();
+        const isShell = name.endsWith('.html') || name === 'sw.js';
+        if (isShell) {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+        }
+      },
+    }),
+  );
 
   app.use('/health', createHealthRouter());
   registerGoogleOAuthLanding(app);
@@ -59,6 +72,7 @@ export const buildApp = () => {
   registerCrmModule(app);
   registerJobsModule(app);
   registerChatModule(app);
+  registerAgentInboxModule(app);
   registerPushModule(app);
   registerDebugRoutes(app);
 

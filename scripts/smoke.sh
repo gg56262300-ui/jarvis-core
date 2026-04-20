@@ -41,10 +41,11 @@ curl --max-time 10 -s -X POST "$BASE_URL/api/voice/turns" \
   --data '{"text":"mis ilm Calpes on","locale":"et-EE","source":"text"}' | python3 -m json.tool
 
 echo
-echo "===== CHAT (lühike) ====="
+echo "===== CHAT (lühike, brauseri kuupäev + tsoon nagu chat.html) ====="
+CHAT_JSON="$(node -e "const d=new Date();const ymd=\`\${d.getFullYear()}-\${String(d.getMonth()+1).padStart(2,'0')}-\${String(d.getDate()).padStart(2,'0')}\`;console.log(JSON.stringify({message:'Ütle ainult sõna OK.',history:[],clientTimeZone:(typeof Intl!=='undefined'&&Intl.DateTimeFormat().resolvedOptions().timeZone)||'Europe/Tallinn',clientLocale:'et',clientLocalCalendarDate:ymd}))")"
 curl --max-time 25 -s -X POST "$BASE_URL/api/chat" \
   -H "Content-Type: application/json; charset=utf-8" \
-  --data '{"message":"Ütle ainult sõna OK.","history":[]}' | python3 -m json.tool
+  --data "$CHAT_JSON" | python3 -m json.tool
 
 echo
 echo "===== CRM LEADS ====="

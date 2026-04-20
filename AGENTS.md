@@ -81,6 +81,10 @@ Turn Jarvis into a semi-autonomous development system with:
 5. **Logid:** `logs/autocheck-launchd.out.log` ja `logs/autocheck-launchd.err.log`; olek ka `logs/autocheck-state.json`.
 6. **Peatumine:** `launchctl bootout "gui/$(id -u)/com.jarvis.autocheck"`.
 7. **Märkus:** kui projekti tee pole `/Users/kait/jarvis-core`, muuda plistis `WorkingDirectory`, `StandardOutPath` ja `StandardErrorPath`.
+8. **Chat-kanal (Robert) on valve osa:** `scripts/jarvis-autocheck.mjs` kontrollib iga käiguga peale `/health` ka **GET** `/api/chat/channel?after=0` nii kohalikult (`http://127.0.0.1:3000`) kui avaliku tunneli baasiga (`JARVIS_PUBLIC_BASE`, vaikimisi `https://jarvis-kait.us`). Kui mõni neist ebaõnnestub, on üldolek **PROBLEM** ja Telegram/Push käituvad nagu health puhul (teavitus **ainult oleku muutusel** OK↔PROBLEM).
+9. **Automaatne taastumiskatse (piiratud):** kui valve leiab probleemi, võib skript ühe korra käivitada **`pm2 restart jarvis`** (kui kohalik health või kohalik kanal on katki) või **`pm2 restart cloudflared`** (kui kohalik on korras, aga avalik kanal mitte — tüüpiliselt tunnel). Sama liiki restart ei kordu **30 min** jooksul (cooldown), et vältida pidevat taaskäivitust.
+10. **Püsiv tunnel ↔ origin:** PM2-s `cloudflared` peab suunama originisse **`http://127.0.0.1:3000`** (skript `scripts/cloudflared-jarvis-tunnel.sh`), mitte `localhost` (macOS võib viia `::1` peale ja tekkida `connection refused`). Pärast muudatust: `pm2 save`.
+11. **Käsitsi kogu ahel:** `npm run channel:check` — PM2 olek, kohalik + avalik `/health` ja mõlemad `/api/chat/channel` otspunktid.
 
 ## Cursor Patch Discipline (Locked)
 
@@ -221,6 +225,14 @@ Terminali marker: iga käsuploki alguses prindi roheline marker printf '\033[1;4
   Varukoopiad: npm run backup, kuhu fail läheb, et .env zipis eraldi kaasas, 7 päeva puhastus, serverisse ainult krüptitult + scp/rsync mõte.
   Vestluse ajad: Jarvis chat.html näitab nüüd aega; Cursori küljeriba chati kuupäeva ei saa projektifailidega muuta — seal määrab Cursor ise; logide jaoks pm2 logs / logs/.
 
+## Partnerlus + omaniku suunamine (Cursor + Jarvis)
+
+1. **Ühine loogika:** omanik annab eesmärgi; agent tunneb Jarvisi koodi ja töövoogu **paremini kui ükski väline lugeja** — seega agent peab **koos** omanikuga mõtlema ja **proaktiivselt** ütlema: mis rakendus, **mis vaade/koht ekraanil**, **mis nupp või käsk**, **mis tulemus** (mitte ainult “tee kuskil midagi”).
+2. **Cursor (IDE) — kinnitused:** kui agent palub terminalikäsku, võib ilmuda **Run** (käivita see üks plokk) või **Allowlist `curl` + N** (luba sama tüüpi käsud hiljem vähema klikiga). Agent **ütleb lühidalt**, mida see tähendab ja millal see on mõistlik (usaldusväärne, ettearvatav diagnostika samas repos), et omanik ei peaks ise arvama.
+3. **Piirang (ausalt):** agent **ei näe** omaniku Cursori akent reaalajas. Kui vaja täpset “kuhu vajutada”, kas omanik saadab **screenshoti** / kopeerib nupu teksti, või agent kirjeldab **tüüpilise** Cursori käitumise vastavalt sellele, millise käsu ta parasjagu küsis.
+4. **Jarvis veeb:** anna alati **konkreetne tee või URL** (nt `http://127.0.0.1:3000/chat.html`) ja **mis vaates** mida kontrollida pärast muudatust.
+5. **Telefon ↔ Cursor sild:** omaniku sõnumid `chat.html`-is logitakse `logs/agent-inbox.jsonl` (kui `JARVIS_AGENT_INBOX_TOKEN` on seatud, ka `GET/POST /api/agent-inbox`). Omanik märgib arendusjuhised rea alguses **`AGENT:`** või **`CURSOR:`** (vene **АГЕНТ:** / **КУРСОР:**). Robert vastab lühidalt kinnitusega; pika koodi ja repo-muudatusi teeb Cursori agent. Vastused omanikule telefonis võivad tulla **`POST /api/chat/channel`** (bridge token) assistendi sõnumina.
+
 ## Cursor: YOLO / auto-approve (keelatud)
 
 - **Ära lülita sisse** Cursori “YOLO mode” / täielikku auto-approve’i kõikidele käskudele.
@@ -239,6 +251,109 @@ Pärast mõistlikku koodimuudatust või enne “valmis” kinnitust käivita **p
 
 **Ei kuulu vaikimisi tsüklisse:** `.env` sisu käsitsi “mängimine”, portide muutmine, suured refaktorid.  
 **MAX režiimis** (vt all) võivad `git commit` / `git push` ja vajadusel `npm install` kuuluda agenti autonoomse töövoogu, kui tingimused on täidetud.
+
+## Paralleelne tööreegel (omanik kinnitas)
+
+Paralleelne töö on lubatud, kui see **ei halvenda kvaliteeti** ja järgib allolevaid tingimusi:
+
+1. **Kahe raja mudel:**
+   - **Rada A (stabiilsus, alati prioriteet):** build/lint/gate/smoke/health, runtime, backup, regressioonikontroll.
+   - **Rada B (funktsionaalne edenemine):** Make + CRM + e-post + kontaktid + WhatsApp ettevalmistus vastavalt kinnitustele.
+2. **Kvaliteedigate on kohustuslik iga tsükli lõpus:** `npm run build` → `npm run lint` → `npm run gate:fast` → `npm run smoke` → health kontroll.
+3. **Stop-tingimus:** kui Rada A läheb kollaseks/punaseks (build/lint/gate/smoke/health fail), siis Rada B pausile kuni Rada A on taas roheline.
+4. **KINNITAN piirangud jäävad jõusse:** Gmail/Contacts/WhatsApp **koodimuudatused** ainult eraldi omaniku kinnitusega (`KINNITAN: ...`).
+5. **Lühiraport igas tsüklis:** eraldi staatus Rada A ja Rada B kohta + järgmine samm.
+
+## MAX Autopiloot v2 (omanik kinnitas)
+
+Eesmärk: **suurem töömaht + vähem omaniku kinnitusi**, ilma kvaliteeti langetamata.
+
+1. **Autonoomne suurtsükkel (vaikimisi):** agent teeb järjest mitu loogilist tööpaketti ilma mikrokinnitusteta.
+2. **RUN-PACK põhimõte:** käsud koondatakse loogiliseks plokiks ja täidetakse ühe tsüklina; mitte üksikute pisikinnituste jadana.
+3. **5-suuna paralleelmudel:**
+   - A: stabiilsus (build/lint/gate/smoke/health, backup, runtime) — alati prioriteet.
+   - B: Make integatsiooni töökindlus.
+   - C: CRM valmisolek ja vood.
+   - D: e-post + kontaktid valmisolek.
+   - E: WhatsApp valmisolek (kood ainult `KINNITAN` piirangute järgi).
+3.1 **10-suuna turbo (kui eesmärk on kiire mobiilne stabiliseerimine):**
+   - Lubatud jaotada B–E täpsemateks alasuundadeks (nt push, PWA UI, kanalilogid, taasteloogika, status-raportid), kuid A-rada jääb alati peamiseks piduriks.
+   - 10-suuna režiim on lubatud ainult siis, kui iga tsükli lõpus jäävad kõik gate’id roheliseks.
+4. **Kohustuslik tsükli lõppkontroll:** `npm run build` → `npm run lint` → `npm run gate:fast` → `npm run smoke` → health kontroll.
+5. **Kvaliteedikaitse (hard stop):** kui A-rada ebaõnnestub, B/C/D/E pausile kuni A taas roheline.
+6. **Kinnituste minimeerimine:** agent ei küsi kinnitust diagnostika, kontrollkäskude, väikeste pööratavate paranduste ja dokumentatsiooni täienduste jaoks.
+7. **Piirangud jäävad jõusse:** `.env`/saladused, port 3000, destruktiivne git, Gmail/Contacts/WhatsApp kood ilma eraldi `KINNITAN` käsuta.
+8. **Raportiformaat:** iga tsükli lõpus lühike A/B/C/D/E staatus + järgmine konkreetne samm.
+
+## Mobiilne kaugrežiim (omanik kinnitas)
+
+Eesmärk: omanik saab linnas/teel olles juhtida Jarvist telefonist ilma täis-Cursori töölauata.
+
+**Rollerite jaotus (omaniku kinnitatud):** Mac = peamine arendus ja juhtimine; telefon/tahvel = kaasaskantav kasutus; server = pidev Jarvis ja ülejäänud seosed.
+
+1. **Kanalistrateegia (vaikimisi):**
+   - **Peakanal:** Jarvis-Robert (`/chat.html`) mobiilibrauseris — dialoog, kinnitused, töövoo juhtimine.
+   - **Valvekanal:** Telegram — tervise- ja häireteavitused, kui PWA/push ei jõua kohale.
+2. **Miks nii:** Robert sobib aktiivseks tööks; Telegram sobib sündmuste “alarmiks” ja varukanaliks.
+3. **Enne kodust lahkumist kohustuslik preflight:**
+   - Jarvis health = OK.
+   - PWA/push telefonis testitud (testteavitus jõuab kohale).
+   - Telegram teavitus testitud (autocheck või käsitsi test).
+   - Kaug-URL (bridge/tunnel) töötab telefonivõrgust.
+4. **Töö ajal telefonist:**
+   - kriitilised kinnitused teha Robertis (Jah/Ei või tekstikäsk);
+   - kui Robert pole kättesaadav, kasutada Telegramit häire tuvastuseks ja naasta Robertisse niipea kui võimalik.
+5. **Piirang:** telefonirežiim ei asenda täismahus arendust (build/lint/suured koodimuudatused jäävad agendile + arvutile).
+6. **Kvaliteedikaitse jääb samaks:** kõik stabiilsusgate’id ja `KINNITAN` piirangud kehtivad ka mobiilse kaugrežiimi ajal.
+7. **Kompaktrežiim (väike ekraan):**
+   - omaniku küsimused hoida lühikesed (üks eesmärk korraga, 1-2 lauset);
+   - agendi vastus vaikimisi kuni 3 lühilauset, detailid ainult nõudmisel;
+   - kinnitused anda eelistatult kujul **Jah / Ei / Stop / Jätka**;
+   - pikkadest menüüdest ja “seletusest seletusele” hoiduda; kõigepealt otsus, siis üks järgmine samm;
+   - kui vaja valikut, agent annab maksimaalselt 2 varianti, mitte pika nimekirja.
+8. **Telefoni töövoo formaat (vaikimisi):**
+   - `STAATUS:` üks rida (🟢/🟡/🔴),
+   - `JÄRGMINE SAMM:` üks konkreetne tegevus,
+   - `KÜSIMUS:` ainult siis, kui ilma selleta ei saa jätkata.
+9. **Püsikäsud telefonis (Robert):**
+   - **Sisselülitus / aktiviseerimine:** `Robert, просыпайся` või `ÄRKA` → `MODE:JÄTKA`.
+   - **Väljalülitus / paus:** `Robert, засыпай` või `MAGA` → `MODE:STOP`.
+   - **Töörežiim (individuaalselt):** `индивидуально` või `INDIVIDUAALSELT` → `MODE:JÄTKA` (`mobile-remote-state.json`), st omanik annab **loa** jätkata **ilma pidevate telefonikinnitusteta**. **Tähendus:** Robert (vestlus) ja **Cursori agent** (Mac) võivad töötada **iseseisvalt** omaniku **eelnevalt kinnitatud piirides** (`Omaniku volitus`, `MAX režiim`, `KINNITAN` piirangud) — mitte nii, et saladused või paroolid “antakse Robertile chatti”; saladused jäävad `.env` / turvalisele kanalile. Paralleelselt võib olla **mitu suunda** (skeemi A/B/C/D/E ja MAX-i **5–10 suunda** kui kõik gate’id on rohelised); omanik ei pea iga sammu telefonis kinnitama, kuid **keelud ja saladused** kehtivad täies ulatuses. **`AAA` / `AAAA`:** eraldi käsk reegli- või käitumise täpsustuse logimiseks / AGENTS täiendamiseks — ei asenda `INDIVIDUAALSELT` tähendust, vaid täiendab dokumentatsiooni.
+   - **Seisukontroll:** `STAATUS`.
+   - **Spikker:** `ABI`.
+   - **Reeglisoov:** `AAA` või `AAAA` (agent küsib 1 lausega, mida AGENTS.md-sse lisada/uuendada).
+10. **Kanali valve (seansi ajal):**
+   - Kui telefoniseanss on aktiivne, agent hoiab kanali töökorras vaikse taustakontrolliga.
+   - Kontrollintervall määratakse automaatselt (vaikimisi ~75 s), et vältida liigset koormust.
+   - Kontroll hõlmab vähemalt: server health + push-kanali sidestuse olemasolu.
+   - Kui side katkeb (nt push sidestus kaob), agent teeb automaatse taastamise katse.
+   - Omanikule kuvatakse teade ainult siis, kui on vaja käsitsi sekkumist.
+   - Kui Robert pole parajasti avatud, peavad push-teavitused siiski kohale jõudma (heli + teavituskeskus + võimalusel appi badge/count).
+   - Teavitused peavad jääma avatavaks nii, et omanik saab hiljem kinnitada või aktiveerida Roberti.
+11. **Vestluse avamine telefonis:** Robert peab avamisel viima vaate automaatselt viimase sõnumi juurde (ei tohi jätta kasutajat käsitsi alla kerima).
+12. **Kirjutusväli telefonis:** `Kirjuta siia` väli on varukanal ja peab alati töötama — klikk/vajutus avab klaviatuuri; automaatset klaviatuuri avamist ilma kasutaja vajutuseta ei tehta.
+13. **AAA/AAAA jälg:** telefoni lühikäsud `AAA`/`AAAA` peavad läbima, salvestuma ja jääma hiljem auditiks loetavaks.
+14. **iOS Push nõue (Apple):** iPhone/iPad Safari Web Push töötab ainult siis, kui Robert on enne avaekraanile lisatud (Safari → jaga → „Lisa avaekraanile”) ja avatud avaekraanilt. Tavalises Safari tabis push ei aktiveeru — see ei ole viga, vaid Apple’i nõue alates iOS 16.4.
+15. **Võrk (4G vs WiFi):** Jarvis avalik kanal (`https://jarvis-kait.us`) käib läbi cloudflared tunneli ja töötab igast võrgust. Kui telefonis jõuab chat.html vaade kohale, siis kanal on korras ja Wi-Fi vahetamine ei ole vajalik.
+16. **Mobile-mode piirid (project-chat vs kalender/meil):** kui `mobile-remote-state.json` mode = `continue` (või tulnud just `ÄRKA/просыпайся/INDIVIDUAALSELT`), siis lühikesed töövoo-küsimused (nt `mis järgmine samm`, `что дальше`, `какое следующее действие`, `next step`) tõlgendatakse **alati projekti tööseisu päringuna** (`STAATUS` vastus: A/B/C/D/E, MODE, ETAPP, version) — mitte LLM-i vabas vormis kalendri-/meiliettepanekuna. Kalendrisse või meili lisamine toimub ainult siis, kui omanik sõnaselgelt palub (nt „lisa kalendrisse”, „saada kiri”).
+16.1 **Jarvisi arengufaas vs kalender:** kui sõnumis on **Jarvis/Robert** ja küsitakse **etappi/faasi/staadiumit/развития/стадии** (nt „в каком этапе проект Джарвис”) **ilma** kalendri/meili/kontakti kontekstita, vastab server **otse** sama `STAATUS`-rea loogikaga mis `STAATUS` / `JDEV` — **ei** läbi LLM-i ega kalendritööriistu. Lühikoodid: `JDEV`, `JARVIS PROJEKT` (täpne fraas `normalizeMobileCommand` nimekirjas) = sama päring.
+17. **STAATUS kui peamine aktiveeriv käsk (lihtsustus):** telefonis on `STAATUS` vaikimisi peakäsk — ühtlasi hoiab/näitab projekti seisu ja näitab kohe tervise kokkuvõtet. `ÄRKA/MAGA/просыпайся/засыпай` on säilitatud tagasiühilduvuseks, aga omanikule piisab ainult `STAATUS`-est.
+18. **Iga sõnumi visuaalne olek (mobiilis ja lauas):** iga kasutaja sõnum kuvab enda kõrval oma olekumarkeri — **keerlev vänt** päringu ajal, **roheline ✓** eduka vastuse järel, **punane ✕** vea puhul. Lisaks on vähemalt 800 ms kuvatav **ülemine edenemisriba** ja „mõtleb” mull, et tagasiside ei läheks kaduma.
+19. **Paralleelne töö (projekt + kalender/meil/kontaktid):** kui omaniku sõnum sisaldab sõnu `kalender/календарь/calendar`, `meeldetuletus/напомни/reminder`, `kiri/письмо/mail`, `kontakt/контакт/contact`, siis läheb päring LLM-i tavalisele marsruudile (tööriistad lubatud). Kui sõnum on selge mobiilikäsk (`STAATUS/JÄTKA/STOP/JÄRGMINE/ABI/AAA/ÄRKA/MAGA`), jääb see mobiilikäsu käsitlejale. Kaks rada ei sega teineteist.
+20. **Projektijuhtimine telefonist (Jarvisi ehitus — sisse/välja):**
+    - **Sisse (sinu juhised ja küsimused):**
+      - **Üldseis / etapp:** `STAATUS`, `JDEV`, `JARVIS PROJEKT` või pikk küsimus Jarvisi faasi kohta (server annab A/B/C/D/E + MODE + ETAPP rea).
+      - **Arendus- ja Cursori rida:** rea algus **`AGENT:`** või **`CURSOR:`** (vene **АГЕНТ:** / **КУРСОР:**) — tekst logitakse `agent-inbox` kaudu; Robert vastab lühidalt kinnitusega, pikka koodi kirjutab Cursor Macis.
+      - **Järjekord etappide vahel:** `JÄRGMINE` (kui lubatud töövoos); **`JÄTKA` / `STOP`** — kas taustal võib eeldada autonoomset tsüklit või mitte.
+      - **Reegli/mudeli muudatus:** `AAA` / `AAAA` + lühike märkus.
+      - **Kalender / meil / kontaktid:** tavaline lause selge sõnaga (vt punkt 19) — mitte arenduseesliite `AGENT:` all, kui tegelikult taheti sündmust.
+    - **Välja (kuidas infot tagasi saad):**
+      - **Roberti mull** `chat.html`-is — kohene vastus (sh lühike kinnitus `AGENT:` reale).
+      - **Sama vestlus, assistendi sõnum** — kui Cursor on saatnud vastuse **`/api/chat/channel`** kaudu; loe seda kui ametlikku arendusvastust.
+      - **Push** — kanali/peegelduste teavitused (kui PWA/õigused korras).
+      - **Telegram** — eeskätt autocheck OK↔PROBLEM ja muud valveteated, kui chat ei tööta.
+    - **Minimaalne rutiin:** enne tänavale — preflight (punkt 3); lühiseanss — `STAATUS`; pärast Cursori tööd telefonis kontrolli, kas assistendi sõnum kanalis vastab ootusele.
+    - **Aus piirang:** Cursor ei näe telefoni ekraani; täpne „mida agent teeb“ sõltub sellest, et **Macis** on Cursor/chat avatud või et sa loed **`agent-inbox`** / kanali sõnumeid järgmisel korral.
 
 ## Kokkuvõte omanikule (lihtne keel, heliks sobiv)
 

@@ -1575,19 +1575,12 @@ export class VoiceService {
   }
 
   private async fetchTodayCompactStatusSummary(): Promise<string> {
-    const [backendOk, pendingConfirmations, calendarHasEvents] = await Promise.all([
+    const [backendOk, pendingConfirmations] = await Promise.all([
       this.fetchBackendOk(),
       this.fetchPendingConfirmations(),
-      this.fetchTodayCalendarHasEvents(),
     ]);
 
     const backendText = backendOk === true ? 'backend töötab' : backendOk === false ? 'backend maas' : 'backend teadmata';
-    const calendarText =
-      calendarHasEvents === true
-        ? 'täna on sündmusi'
-        : calendarHasEvents === false
-          ? 'täna sündmusi ei ole'
-          : 'kalender teadmata';
     const confirmationsText =
       pendingConfirmations === true
         ? 'ootel kinnitusi on'
@@ -1595,7 +1588,7 @@ export class VoiceService {
           ? 'ootel kinnitusi ei ole'
           : 'kinnitused teadmata';
 
-    return `Tänane seis: ${backendText}; ${calendarText}; ${confirmationsText}.`;
+    return `Jarvise seis: ${backendText}; ${confirmationsText}.`;
   }
 
   private async fetchBackendOk(): Promise<boolean | null> {
@@ -1649,16 +1642,6 @@ export class VoiceService {
       request.on('error', () => resolve(false));
       request.end();
     });
-  }
-
-  private async fetchTodayCalendarHasEvents(): Promise<boolean | null> {
-    try {
-      const calendarResult = await this.calendarService.listTodayEvents(1);
-      if (calendarResult.status !== 'ready') return null;
-      return calendarResult.events.length > 0;
-    } catch {
-      return null;
-    }
   }
 
 }
