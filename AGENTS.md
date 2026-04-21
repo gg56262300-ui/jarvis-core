@@ -227,6 +227,10 @@ Terminali marker: iga käsuploki alguses prindi roheline marker printf '\033[1;4
   Vestluse ajad: Jarvis chat.html näitab nüüd aega; Cursori küljeriba chati kuupäeva ei saa projektifailidega muuta — seal määrab Cursor ise; logide jaoks pm2 logs / logs/.
 - **N-punktilise järjekorra aruanne (omaniku kinnitatud tööviis):** kui on kokku lepitud kindel **nummerdatud** tööde nimekiri (nt 10 punkti järjest), agent **ei edasta** iga punkti või osalise täitumise kohta eraldi vahe-aruandeid; agent töötab nimekirja järgi ja annab **ühe koondaruande**, kui **kõik** punktid on **valmis** või kui tekib **blokeerija**, mis nõuab omaniku otsust (siis **üks** lühike teade põhjusega). Erandid: omanik küsib eraldi staatust; `AAA`/`AAAA` reegli täpsustus. Sama loogika kehtib tulevikus analoogiliste nimekirjade kohta, kui omanik seda kinnitab (`AAA`).
 - **AAA: “ära sega, tee mahtu” (omaniku kinnitatud):** kui omanik ütleb, et agent peab töötama individuaalselt / “ära dörgi” / “tee 200–300 ülesannet”, siis agent **ei küsi** jooksvalt kinnitusi ega “kas jätkan?” küsimusi. Agent teeb järjest tööpakke, mida saab teha autonoomselt (stabiilsus+automaatika+testid+docs) ja annab tagasisidet **ainult** siis, kui (a) **50 suuremat tööpakki** on tervikuna valmis või (b) tekib **blokeerija**, mis vajab omaniku otsust (saladus/valik/oht). Omanik küsib staatust siis, kui tal endal huvi on.
+- **AAA: kinnituste “RUN-pack” (omaniku kinnitatud):** kui töö käigus tekib asju, mis vajavad omaniku otsust/kinnitust (saladus/valik/oht), siis agent **ei küsi** neid ükshaaval. Agent kogub need **üheks paketiks** ja küsib kinnitust **harva**:
+  - vaikimisi koondab kuni **10–20** kinnitust ühte “RUN-pack” sõnumisse;
+  - agent ei katkesta autonoomset tööd enne, kui koondpakett on valmis (v.a. kui oht on kohene);
+  - omanik vastab pakile korraga (nt “JAH” / “EI” / konkreetsed valikud), ja agent jätkab järgmist RUN-pack’i.
 
 ## Partnerlus + omaniku suunamine (Cursor + Jarvis)
 
