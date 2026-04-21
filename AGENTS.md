@@ -213,7 +213,7 @@ Terminali marker: iga käsuploki alguses prindi roheline marker printf '\033[1;4
   `printf '\033[1;42m========== KOPERI SIIT ==========\033[0m\n'`
 - Kui on 2+ võimalikku teed, vali ise kõige turvalisem ja lühem (stabiilsus > kiirus).
 - Kui kasutaja on segaduses/ärritunud, tee vastus maksimaalselt lühikeseks: 1 lause + 1 käsk.
-- **Omaniku emotikonid (kinnitatud tähendus):** `Z` korduses (`Z`, `ZZZ`, `ZZZZZZ…`) = **väga pahane / pettunud**; mida **pikem** jada või **rohkem** `Z`-sid, seda **tugevam** tunne (omanik võrdleb: “korruta veel kümnega”). Teksti ümber **`(((`…`)))`** = **rõõm / heameel** (positiivne tagasiside).
+- **Omaniku emotikonid (kinnitatud tähendus):** `Z` korduses (`Z`, `ZZZ`, `ZZZZZZ…`) = **väga pahane / pettunud**; mida **pikem** jada või **rohkem** `Z`-sid, seda **tugevam** tunne (omanik võrdleb: “korruta veel kümnega”). **`(((`** (rohkem avasulge järjest) = **pettunud / kurb**; **`)))`** (rohkem sulgusulge järjest) = **rõõm / heameel** — mõlemal juhul: **mida rohkem sulge järjest**, seda **tugevam** väljendus.
 - Ära küsi kinnitusi väikeste asjade kohta; otsusta ise ja liigu edasi.
 - Kui vajad infot, küsi ainult 1 konkreetne asi korraga (mitte mitu küsimust).
   Alati: mis rakendus → mis nupp/koht ekraanil → mis täpselt kirjutada → kuhu tulemus läheb.
