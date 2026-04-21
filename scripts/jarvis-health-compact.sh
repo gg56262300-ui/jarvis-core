@@ -11,6 +11,7 @@ openai_ok=1
 crm_ok=1
 wa_ok=1
 channel_ok=1
+cloudflared_ok=1
 
 curl -fsS --max-time 6 "${BASE_URL%/}/health" >/dev/null 2>&1 || health_ok=0
 
@@ -38,11 +39,19 @@ else
   channel_ok=0
 fi
 
-if [ "$health_ok" = "1" ] && [ "$openai_ok" = "1" ] && [ "$crm_ok" = "1" ] && [ "$wa_ok" = "1" ] && [ "$channel_ok" = "1" ]; then
+if command -v npm >/dev/null 2>&1; then
+  if ! npm run -s check:cloudflared >/dev/null 2>&1; then
+    cloudflared_ok=0
+  fi
+else
+  cloudflared_ok=0
+fi
+
+if [ "$health_ok" = "1" ] && [ "$openai_ok" = "1" ] && [ "$crm_ok" = "1" ] && [ "$wa_ok" = "1" ] && [ "$channel_ok" = "1" ] && [ "$cloudflared_ok" = "1" ]; then
   echo "KOKKU: OK"
   exit 0
 fi
 
-echo "KOKKU: FAIL health=$health_ok openai=$openai_ok crm=$crm_ok whatsapp=$wa_ok channel=$channel_ok"
+echo "KOKKU: FAIL health=$health_ok openai=$openai_ok crm=$crm_ok whatsapp=$wa_ok channel=$channel_ok cloudflared=$cloudflared_ok"
 exit 1
 

@@ -38,6 +38,11 @@ fi
 echo "== build =="
 npm run build
 
+if command -v npm >/dev/null 2>&1; then
+  echo "== cloudflared check =="
+  npm run -s check:cloudflared || true
+fi
+
 if [ "$SKIP_OPENAI" != "1" ]; then
   echo "== openai auth =="
   npm run check:openai-auth

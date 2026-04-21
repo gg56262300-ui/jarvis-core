@@ -77,6 +77,7 @@ npm run ops:one
 ```
 
 See teeb: `git pull --ff-only` → `npm ci` → `npm run build` → `npm run check:openai-auth` → kompaktne `channel:check` → `pm2 restart jarvis --update-env` (ja `cloudflared`, kui olemas) → kontroll uuesti.
+Lisaks teeb ta ka `check:cloudflared` ja `health:compact` (üks rida OK/FAIL).
 
 Kui repo on “dirty”, siis ta **keeldub** (et vältida pooliku töö deploy’d). Vajadusel override:
 
