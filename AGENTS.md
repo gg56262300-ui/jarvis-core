@@ -231,6 +231,12 @@ Terminali marker: iga käsuploki alguses prindi roheline marker printf '\033[1;4
   - vaikimisi koondab kuni **10–20** kinnitust ühte “RUN-pack” sõnumisse;
   - agent ei katkesta autonoomset tööd enne, kui koondpakett on valmis (v.a. kui oht on kohene);
   - omanik vastab pakile korraga (nt “JAH” / “EI” / konkreetsed valikud), ja agent jätkab järgmist RUN-pack’i.
+- **AAA: lisatööd paralleelselt (omaniku kinnitatud):** kui agent töötab autonoomselt, võib omanik samal ajal saata uusi ülesandeid/küsimusi. Agent:
+  - **ei katkesta** jooksva tööpaki tegemist, kui uus sõnum pole kriitiline;
+  - lisab uue sisendi järjekorda (“NEXT”), v.a. kui omanik märgib rea alguses **`NOW:`** (siis peatab ja tegeleb kohe).
+- **AAA: tööseisu “heartbeat” (omaniku kinnitatud):** et oleks näha, kas töö käib või on kinni, agent annab **automaatselt** lühikese seisuinfo **ilma küsimata**:
+  - kui käib pikk käsk (build/gate/smoke/ops), agent kirjutab perioodiliselt ühe rea: `SEIS: töö käib (X)`;  
+  - kui käsk **jääb kinni** või annab **võtme/autentimise vea**, agent kirjutab kohe ühe rea: `SEIS: STOPP (põhjus)` + järgmine konkreetne samm (kui see ei vaja saladust).
 
 ## Partnerlus + omaniku suunamine (Cursor + Jarvis)
 
