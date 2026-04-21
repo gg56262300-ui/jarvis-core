@@ -237,6 +237,27 @@ Terminali marker: iga käsuploki alguses prindi roheline marker printf '\033[1;4
 - **AAA: tööseisu “heartbeat” (omaniku kinnitatud):** et oleks näha, kas töö käib või on kinni, agent annab **automaatselt** lühikese seisuinfo **ilma küsimata**:
   - kui käib pikk käsk (build/gate/smoke/ops), agent kirjutab perioodiliselt ühe rea: `SEIS: töö käib (X)`;  
   - kui käsk **jääb kinni** või annab **võtme/autentimise vea**, agent kirjutab kohe ühe rea: `SEIS: STOPP (põhjus)` + järgmine konkreetne samm (kui see ei vaja saladust).
+- **AAA: OpenAI võti — üks terminaliplokk (omaniku kinnitatud, püsiv):** OpenAI võtit **mitte chatti**. Vaikimisi tee nii (Mac / zsh): kleebi **üks** plokk terminali → oota prompti `PASTE KEY` → kleebi võti → Enter (sisend on peidetud, see on normaalne) → kontroll.
+
+```bash
+printf '\033[1;42m========== KOPERI SIIT ==========\033[0m\n'
+cd ~/jarvis-core
+mkdir -p data
+chmod 700 data
+printf 'PASTE KEY (siis ENTER) > '
+read -r -s KEY
+echo
+[ -n "$KEY" ] || { echo "FAIL: tühi"; exit 1; }
+printf '%s\n' "$KEY" > data/openai-api-key.txt
+chmod 600 data/openai-api-key.txt
+python3 -c "import pathlib,re; p=pathlib.Path('.env'); r=p.read_text(errors='ignore') if p.exists() else ''; r=re.sub(r'^OPENAI_API_KEY=.*$','OPENAI_API_KEY=',r,flags=re.M); r=re.sub(r'^OPENAI_API_KEY_FILE=.*$','OPENAI_API_KEY_FILE=data/openai-api-key.txt',r,flags=re.M); r=(r.rstrip('\n')+'\nOPENAI_API_KEY_FILE=data/openai-api-key.txt\n') if 'OPENAI_API_KEY_FILE=' not in r else (r if r.endswith('\n') else r+'\n'); p.write_text(r,encoding='utf-8'); print('OK: .env')"
+npm run check:openai-auth
+```
+
+  - **Kuhu võti läheb:** `~/jarvis-core/data/openai-api-key.txt` (ainult üks rida: `sk-...` / `sk-proj-...`).
+  - **`.env`:** peab olema `OPENAI_API_KEY_FILE=data/openai-api-key.txt` (ülemine plokk seab selle).
+  - **Alternatiiv (kui terminal tüütab halvasti):** ava Finder/TextEdit fail `data/openai-api-key.txt`, kleebi võti, salvesta; siis `npm run check:openai-auth`.
+  - **PM2:** kui `.env` või võti muutus, siis `pm2 restart jarvis --update-env`.
 
 ## Partnerlus + omaniku suunamine (Cursor + Jarvis)
 
