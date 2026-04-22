@@ -125,7 +125,7 @@ echo
 echo "===== What to fix first ====="
 echo "1) Make: fix MAKE_WEBHOOK_URL when kind is not_found_or_gone (404/410)."
 echo "2) Google: complete OAuth once so status becomes ready."
-echo "3) Backups: ensure backups/*.zip exists and freshness is OK."
+echo "3) Backups: ensure backups/jarvis-core-*.zip või *.tar.gz on olemas ja freshness on OK."
 echo
 echo "===== Server RUN-pack ====="
 echo "printf '\\033[1;42m========== KOPERI SIIT ==========\\033[0m\\n'"
