@@ -13,7 +13,23 @@ if [[ ! -d "$BACKUP_DIR" ]]; then
   exit 1
 fi
 
-latest_file="$(ls -1t "$BACKUP_DIR"/jarvis-core-*.zip 2>/dev/null | sed -n '1p')"
+shopt -s nullglob
+candidates=("$BACKUP_DIR"/jarvis-core-*.zip "$BACKUP_DIR"/jarvis-core-*.tar.gz)
+shopt -u nullglob
+
+latest_file=""
+latest_epoch=0
+for f in "${candidates[@]}"; do
+  [[ -f "$f" ]] || continue
+  if ! e="$(stat -c '%Y' "$f" 2>/dev/null)"; then
+    e="$(stat -f '%m' "$f")"
+  fi
+  if (( e >= latest_epoch )); then
+    latest_epoch="$e"
+    latest_file="$f"
+  fi
+done
+
 if [[ -z "$latest_file" ]]; then
   echo "BACKUP_FRESHNESS_FAIL"
   echo "FRESHNESS=fail"

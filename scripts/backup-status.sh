@@ -10,8 +10,30 @@ if [[ ! -d "$BACKUP_DIR" ]]; then
   exit 1
 fi
 
-latest_file="$(ls -1t "$BACKUP_DIR"/jarvis-core-*.zip 2>/dev/null | sed -n '1p')"
-backup_count="$(ls -1 "$BACKUP_DIR"/jarvis-core-*.zip 2>/dev/null | wc -l | awk '{print $1}')"
+shopt -s nullglob
+candidates=("$BACKUP_DIR"/jarvis-core-*.zip "$BACKUP_DIR"/jarvis-core-*.tar.gz)
+shopt -u nullglob
+backup_count="${#candidates[@]}"
+
+if [[ "$backup_count" -eq 0 ]]; then
+  echo "BACKUP_STATUS=empty"
+  echo "BACKUP_DIR=$BACKUP_DIR"
+  echo "BACKUP_COUNT=0"
+  exit 1
+fi
+
+latest_file=""
+latest_epoch=0
+for f in "${candidates[@]}"; do
+  [[ -f "$f" ]] || continue
+  if ! e="$(stat -c '%Y' "$f" 2>/dev/null)"; then
+    e="$(stat -f '%m' "$f")"
+  fi
+  if (( e >= latest_epoch )); then
+    latest_epoch="$e"
+    latest_file="$f"
+  fi
+done
 
 if [[ -z "$latest_file" ]]; then
   echo "BACKUP_STATUS=empty"
