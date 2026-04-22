@@ -29,6 +29,7 @@
     "ops:help": "./scripts/ops-help.sh",
     "ops:aliases": "./scripts/ops-aliases.sh",
     "ops:doctor": "./scripts/ops-doctor.sh",
+    "ops:progress": "./scripts/ops-progress.sh",
     "ops:one": "sh ./scripts/ops-one.sh",
     "google:oauth:gmail": "node scripts/google-oauth-prompt.mjs gmail",
     "google:oauth:contacts": "node scripts/google-oauth-prompt.mjs contacts",

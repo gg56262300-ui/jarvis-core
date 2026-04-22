@@ -23,7 +23,10 @@ if [[ -z "$latest_file" ]]; then
 fi
 
 now_epoch="$(date +%s)"
-latest_epoch="$(stat -f '%m' "$latest_file")"
+# GNU stat (Linux) vs BSD stat (macOS)
+if ! latest_epoch="$(stat -c '%Y' "$latest_file" 2>/dev/null)"; then
+  latest_epoch="$(stat -f '%m' "$latest_file")"
+fi
 age_seconds="$((now_epoch - latest_epoch))"
 max_age_seconds="$((MAX_AGE_MINUTES * 60))"
 age_minutes="$((age_seconds / 60))"

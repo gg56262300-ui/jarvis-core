@@ -21,8 +21,13 @@ if [[ -z "$latest_file" ]]; then
 fi
 
 latest_name="$(basename "$latest_file")"
-latest_epoch="$(stat -f '%m' "$latest_file")"
-latest_human="$(date -r "$latest_epoch" '+%Y-%m-%d %H:%M:%S %Z')"
+# GNU stat (Linux) vs BSD stat (macOS)
+if ! latest_epoch="$(stat -c '%Y' "$latest_file" 2>/dev/null)"; then
+  latest_epoch="$(stat -f '%m' "$latest_file")"
+fi
+if ! latest_human="$(date -d "@$latest_epoch" '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null)"; then
+  latest_human="$(date -r "$latest_epoch" '+%Y-%m-%d %H:%M:%S %Z')"
+fi
 
 echo "BACKUP_STATUS=ok"
 echo "BACKUP_DIR=$BACKUP_DIR"
