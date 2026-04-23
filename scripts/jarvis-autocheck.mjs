@@ -354,7 +354,7 @@ async function main() {
   const failSummary = summarizeFailure(checks);
 
   console.log(
-    `[${nowIso()}] overall ${overallOk ? 'OK' : 'FAIL'} health=${checks.health.ok ? 'OK' : 'FAIL'} chL=${checks.channelLocal.ok ? 'OK' : 'FAIL'} chPub=${checks.channelPublic.ok ? 'OK' : 'FAIL'} openai=${checks.openai.ok ? 'OK' : 'FAIL'} muutus=${changed}${remediate.ran ? ` remediate=${remediate.action}` : ''}`,
+    `[${nowIso()}] overall ${overallOk ? 'OK' : 'FAIL'} health=${checks.health.ok ? 'OK' : 'FAIL'} chL=${checks.channelLocal.ok ? 'OK' : 'FAIL'} chPub=${checks.channelPublic.ok ? 'OK' : 'FAIL'} openai=${checks.openai.ok ? 'OK' : 'FAIL'} crm=${checks.crm.ok ? 'OK' : 'FAIL'} whatsapp=${checks.whatsapp.ok ? 'OK' : 'FAIL'} fail=${failSummary || '-'} muutus=${changed}${remediate.ran ? ` remediate=${remediate.action}` : ''}`,
   );
 
   if (!changed) {
