@@ -5,7 +5,7 @@ import type { Credentials } from 'google-auth-library';
 import { google } from 'googleapis';
 
 import { env } from '../config/index.js';
-import { resolveGmailStyleRedirectUri } from '../shared/google-oauth/gmail-redirect.js';
+import { resolveGoogleRedirectUri } from '../shared/google-oauth/redirect-uri.js';
 import { AppError } from '../shared/errors/app-error.js';
 
 const CONTACTS_SCOPES = [
@@ -86,7 +86,7 @@ export class ContactsService {
       }),
       tokenPath: this.tokenPath,
       instructions:
-        'Ava see link brauseris, logi Google kontoga sisse ja kleebi tagasi saadud code väärtus POST /api/contacts/google/authorize päringusse.',
+        'Soovitus: ava /api/contacts/google/start (1‑klikk). Alternatiiv: ava authUrl ja lõpeta autoriseerimine.',
     };
   }
 
@@ -330,9 +330,10 @@ export class ContactsService {
   }
 
   private createOAuthClient() {
-    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+    const redirectUri = resolveGoogleRedirectUri('contacts');
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !redirectUri) {
       throw new AppError(
-        'Google OAuth seaded puuduvad. Määra .env failis GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET ja GOOGLE_REDIRECT_URI.',
+        'Google OAuth seaded puuduvad. Määra .env failis GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET ja GOOGLE_CONTACTS_REDIRECT_URI (või legacy GOOGLE_REDIRECT_URI).',
         500,
         'CONTACTS_CONFIGURATION_MISSING',
       );
@@ -341,7 +342,7 @@ export class ContactsService {
     return new google.auth.OAuth2(
       env.GOOGLE_CLIENT_ID,
       env.GOOGLE_CLIENT_SECRET,
-      resolveGmailStyleRedirectUri(),
+      redirectUri,
     );
   }
 

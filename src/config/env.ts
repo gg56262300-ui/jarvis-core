@@ -70,9 +70,23 @@ const envSchema = z.object({
       const t = value.trim().replace(/^\uFEFF/, '');
       return t.length > 0 ? t : undefined;
     }),
+  /**
+   * Roberti vestlus (`/api/chat`, Telegram webhook) — `chat.completions` mudel.
+   * Vaikimisi `gpt-4o-mini`. Muu otspunkt (nt DeepSeek OpenAI-ühilduv): sea `OPENAI_BASE_URL` + võti ning siin mudel, nt `deepseek-chat`.
+   */
+  JARVIS_CHAT_COMPLETION_MODEL: z
+    .string()
+    .optional()
+    .transform((value) => {
+      const t = value?.trim().replace(/^\uFEFF/, '') ?? '';
+      return t.length > 0 ? t : 'gpt-4o-mini';
+    }),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REDIRECT_URI: z.string().optional(),
+  GOOGLE_GMAIL_REDIRECT_URI: z.string().optional(),
+  GOOGLE_CONTACTS_REDIRECT_URI: z.string().optional(),
+  GOOGLE_CALENDAR_REDIRECT_URI: z.string().optional(),
   GOOGLE_PROJECT_ID: z.string().optional(),
   GOOGLE_WORKSPACE_USER: z.string().optional(),
   VOICE_PROVIDER_API_KEY: z.string().optional(),
@@ -97,6 +111,78 @@ const envSchema = z.object({
     .transform((value) => value === 'true' || value === '1'),
   TELEGRAM_BOT_TOKEN: z.string().optional(),
   TELEGRAM_CHAT_ID: z.string().optional(),
+  /** Bot API setWebhook `secret_token` — sissetulevad päringud peavad kandma `X-Telegram-Bot-Api-Secret-Token`. */
+  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
+  /** Pärast boti vastuse saatmist `pinChatMessage` (viimane tükk mitmesõnumilisel vastusel) — nähtav ülaosas; `false` / `0` / `off` välja. */
+  TELEGRAM_PIN_BOT_REPLY: z
+    .string()
+    .optional()
+    .transform((value) => {
+      if (value === undefined || value.trim() === '') {
+        return true;
+      }
+      const t = value.trim().toLowerCase();
+      return t !== 'false' && t !== '0' && t !== 'off' && t !== 'no';
+    }),
+  /** Roberti Telegrami vastus ka häälsõnumina (OpenAI `audio/speech` → `sendVoice`). */
+  TELEGRAM_VOICE_REPLY: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
+  /** OpenAI TTS mudel (nt `tts-1`, `gpt-4o-mini-tts` kui teenus toetab). */
+  TELEGRAM_TTS_MODEL: z
+    .string()
+    .optional()
+    .transform((value) => {
+      const t = value?.trim().replace(/^\uFEFF/, '') ?? '';
+      return t.length > 0 ? t : undefined;
+    }),
+  /** OpenAI TTS hääl (nt alloy, nova, shimmer). */
+  TELEGRAM_TTS_VOICE: z
+    .string()
+    .optional()
+    .transform((value) => {
+      const t = value?.trim().replace(/^\uFEFF/, '') ?? '';
+      return t.length > 0 ? t : undefined;
+    }),
+  /**
+   * Kui true ja `TELEGRAM_INBOUND_PREFIX` on seatud — ainult selle eesliitega sõnumid lähevad Robertile
+   * (/ping, /jarvis jäävad vabaks).
+   */
+  TELEGRAM_INBOUND_PREFIX_REQUIRED: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
+  /** Nt Jarvis või JV — sissetuleva sõnumi algus enne küsimust. */
+  TELEGRAM_INBOUND_PREFIX: z
+    .string()
+    .optional()
+    .transform((value) => {
+      const t = value?.trim().replace(/^\uFEFF/, '') ?? '';
+      return t.length > 0 ? t : undefined;
+    }),
+  /** Assistendi vastuse ette rida (nt ▸ Jarvis) — eristab serveri vastust. */
+  TELEGRAM_REPLY_SIGNATURE: z
+    .string()
+    .optional()
+    .transform((value) => {
+      const t = value?.trim().replace(/^\uFEFF/, '') ?? '';
+      return t.length > 0 ? t : undefined;
+    }),
+  /** Telegrami vestluse «täna» ankur (IANA), kui brauserit pole. */
+  TELEGRAM_DEFAULT_TIMEZONE: z.string().optional(),
+  /** Roberti süsteemviiba keel (nt `ru`, `et-EE`) — Telegrami webhook seab selle vaikimisi. */
+  TELEGRAM_DEFAULT_LOCALE: z.string().optional(),
+  /** Avalik HTTPS origina (ilma lõpupõikketa) — `npm run telegram:set-webhook` koostab webhooki URL-i. */
+  JARVIS_WEBHOOK_PUBLIC_BASE: z.string().optional(),
+  /**
+   * `true` / `1`: küsib Telegramist `getUpdates` ja edastab kohalikule webhookile (sobib Macis ilma tunnelita).
+   * Käivitamisel `deleteWebhook` — ära kasuta samaaegselt avaliku URL-iga webhookiga (üks tarbija).
+   */
+  TELEGRAM_USE_POLLING: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
   PUSH_PAIR_CODE: z.string().optional(),
   PUSH_SUBJECT: z.string().optional(),
   PUSH_SUBSCRIPTIONS_PATH: z.string().optional(),

@@ -28,6 +28,41 @@ export const registerContactsModule = (app: Express) => {
     }
   });
 
+  router.get('/google/start', async (_req, res, next) => {
+    try {
+      const result = await contactsService.getAuthorizationUrl();
+      const authUrl =
+        typeof (result as { authUrl?: unknown })?.authUrl === 'string'
+          ? String((result as { authUrl?: unknown }).authUrl)
+          : '';
+      if (!authUrl) {
+        res.status(500).json(result);
+        return;
+      }
+      res.redirect(authUrl);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/google/callback', async (req, res, next) => {
+    try {
+      const code = typeof req.query.code === 'string' ? req.query.code.trim() : '';
+      if (!code) {
+        res.status(400).type('text').send('Missing Google OAuth code (?code=...)');
+        return;
+      }
+
+      await contactsService.completeAuthorization(code);
+      res
+        .status(200)
+        .type('text')
+        .send('OK. Google Contacts autoriseeritud. Võid selle akna sulgeda ja minna Jarvise juurde tagasi.');
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.post('/google/authorize', authRateLimit, async (req, res, next) => {
     try {
       const code = String(req.body?.code ?? '').trim();

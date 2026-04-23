@@ -7,7 +7,7 @@ import type { gmail_v1 } from 'googleapis';
 import type { Credentials } from 'google-auth-library';
 
 import { env } from '../config/index.js';
-import { resolveGmailStyleRedirectUri } from '../shared/google-oauth/gmail-redirect.js';
+import { resolveGoogleRedirectUri } from '../shared/google-oauth/redirect-uri.js';
 import { AppError } from '../shared/errors/app-error.js';
 import { logger } from '../shared/logger/logger.js';
 
@@ -107,7 +107,7 @@ export class GmailService {
       }),
       tokenPath: this.tokenPath,
       instructions:
-        'Ava see link brauseris, logi Google kontoga sisse ja kleebi tagasi saadud code väärtus POST /api/gmail/google/authorize päringusse.',
+        'Soovitus: ava /api/gmail/google/start (1‑klikk). Alternatiiv: ava authUrl ja lõpeta autoriseerimine.',
     };
   }
 
@@ -707,14 +707,15 @@ export class GmailService {
   }
 
   private readCredentials() {
-    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+    const redirectUri = resolveGoogleRedirectUri('gmail');
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !redirectUri) {
       return null;
     }
 
     return {
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
-      redirectUri: resolveGmailStyleRedirectUri(),
+      redirectUri,
     };
   }
 
@@ -748,7 +749,7 @@ export class GmailService {
     return {
       status: 'authorization_required',
       responseText:
-        'Gmaili kohalik autoriseerimine on veel tegemata. Ava /api/gmail/google/auth-url ja lõpeta autoriseerimine esmalt.',
+        'Gmaili autoriseerimine on veel tegemata. Ava /api/gmail/google/start ja lõpeta autoriseerimine.',
       authUrl: client.generateAuthUrl({
         access_type: 'offline',
         prompt: 'consent',
@@ -762,7 +763,7 @@ export class GmailService {
     return {
       status: 'authorization_required',
       responseText:
-        'Gmaili Google OAuth seaded puuduvad. Määra .env failis GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET ja GOOGLE_REDIRECT_URI.',
+        'Gmaili Google OAuth seaded puuduvad. Määra .env failis GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET ja GOOGLE_GMAIL_REDIRECT_URI (või legacy GOOGLE_REDIRECT_URI).',
       authUrl: '',
       tokenPath: this.tokenPath,
     };

@@ -7,6 +7,7 @@ import type { calendar_v3 } from 'googleapis';
 import type { Credentials } from 'google-auth-library';
 
 import { env } from '../../../config/index.js';
+import { resolveGoogleRedirectUri } from '../../../shared/google-oauth/redirect-uri.js';
 
 const TOKEN_PATH = path.join(process.cwd(), 'data/google-calendar-token.json');
 
@@ -600,9 +601,10 @@ export async function updateUpcomingEventByTitle(input: UpdateCalendarEventInput
 }
 
 async function createAuthorizedClient() {
-  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+  const redirectUri = resolveGoogleRedirectUri('calendar');
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !redirectUri) {
     throw new Error(
-      'Google OAuth keskkonnamuutujad puuduvad. Määra .env failis GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET ja GOOGLE_REDIRECT_URI.',
+      'Google OAuth keskkonnamuutujad puuduvad. Määra .env failis GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET ja GOOGLE_CALENDAR_REDIRECT_URI (või legacy GOOGLE_REDIRECT_URI).',
     );
   }
 
@@ -611,7 +613,7 @@ async function createAuthorizedClient() {
   const client = new google.auth.OAuth2(
     env.GOOGLE_CLIENT_ID,
     env.GOOGLE_CLIENT_SECRET,
-    env.GOOGLE_REDIRECT_URI,
+    redirectUri,
   );
 
   client.setCredentials({

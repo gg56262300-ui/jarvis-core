@@ -83,6 +83,11 @@ elif [ "$gmail_status" = "" ] && [ "$contacts_status" = "" ] && [ "$calendar_sta
   google_note="PROBLEM"
 fi
 percent_line "Google (Gmail+Contacts+Cal)" "$google_pct" "$google_note"
+if [ "$google_pct" != "100" ]; then
+  echo "  Gmail start:    $BASE_URL/api/gmail/google/start"
+  echo "  Contacts start: $BASE_URL/api/contacts/google/start"
+  echo "  Calendar start: $BASE_URL/api/calendar/google/start"
+fi
 
 backup_pct="0"
 backup_note="missing"

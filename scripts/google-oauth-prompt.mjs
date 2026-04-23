@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Küsib OAuth koodi käsitsi ja saadab POST /api/.../google/authorize.
- * Kasutus: node scripts/google-oauth-prompt.mjs gmail
- *          node scripts/google-oauth-prompt.mjs contacts
+ * Legacy abiskript (käsitsi code). Soovitus: kasuta nüüd 1‑kliki OAuth'i:
+ * - /api/gmail/google/start
+ * - /api/contacts/google/start
  */
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
@@ -12,8 +12,12 @@ const kind = (process.argv[2] ?? '').toLowerCase();
 const base = process.env.JARVIS_URL ?? 'http://127.0.0.1:3000';
 
 const paths = {
-  gmail: { auth: '/api/gmail/google/auth-url', authorize: '/api/gmail/google/authorize' },
-  contacts: { auth: '/api/contacts/google/auth-url', authorize: '/api/contacts/google/authorize' },
+  gmail: { auth: '/api/gmail/google/auth-url', authorize: '/api/gmail/google/authorize', start: '/api/gmail/google/start' },
+  contacts: {
+    auth: '/api/contacts/google/auth-url',
+    authorize: '/api/contacts/google/authorize',
+    start: '/api/contacts/google/start',
+  },
 };
 
 if (kind !== 'gmail' && kind !== 'contacts') {
@@ -22,6 +26,7 @@ if (kind !== 'gmail' && kind !== 'contacts') {
 }
 
 const { auth, authorize } = paths[kind];
+const { start } = paths[kind];
 
 console.log('\x1b[1;42m========== KOPERI SIIT ==========\x1b[0m\n');
 
@@ -37,7 +42,10 @@ if (!authUrl) {
   process.exit(1);
 }
 
-console.log('1) Ava brauseris see link (või vajuta Enter, et Macis avada Safari/Chrome):\n');
+console.log('1) Soovitus: kasuta 1‑kliki start URL-i (sama tulem, vähem paste):\n');
+console.log(`${base}${start}`);
+console.log('\nKui pead ikka authUrl kasutama, siis see on all.\n');
+console.log('2) Ava brauseris see link (või Macis avan automaatselt):\n');
 console.log(authUrl);
 console.log('');
 
@@ -49,7 +57,7 @@ if (process.platform === 'darwin') {
 }
 
 const rl = readline.createInterface({ input, output });
-const code = (await rl.question('2) Kleebi siia OAuth code (aadressiribalt või lehelt) ja vajuta Enter:\n')).trim();
+const code = (await rl.question('3) Kleebi siia OAuth code (aadressiribalt või lehelt) ja vajuta Enter:\n')).trim();
 rl.close();
 
 if (!code) {

@@ -29,6 +29,23 @@ export const registerCalendarModule = (app: Express) => {
     calendarController.getAuthorizationUrl(request, response),
   ));
 
+  router.get('/google/start', async (_request: Request, response: Response, next: NextFunction) => {
+    try {
+      const result = await calendarService.getAuthorizationUrl();
+      const authUrl =
+        typeof (result as { authUrl?: unknown })?.authUrl === 'string'
+          ? String((result as { authUrl?: unknown }).authUrl)
+          : '';
+      if (!authUrl) {
+        response.status(500).json(result);
+        return;
+      }
+      response.redirect(authUrl);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.get('/google/callback', handleAsync((request, response) =>
     calendarController.authorizeCallback(request, response),
   ));

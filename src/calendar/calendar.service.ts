@@ -8,6 +8,7 @@ import type { Credentials } from 'google-auth-library';
 import { env } from '../config/index.js';
 import { AppError } from '../shared/errors/app-error.js';
 import { logger } from '../shared/logger/logger.js';
+import { resolveGoogleRedirectUri } from '../shared/google-oauth/redirect-uri.js';
 import {
   createCalendarEvent as createGoogleCalendarEvent,
   deleteUpcomingEventByTitle as deleteGoogleUpcomingEventByTitle,
@@ -388,15 +389,10 @@ export class CalendarService {
   }
 
   private readCredentials() {
-    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+    const redirectUri = resolveGoogleRedirectUri('calendar');
+    if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !redirectUri) {
       return null;
     }
-
-    const port = Number(env.PORT ?? 3000) || 3000;
-    const defaultCallback = `http://127.0.0.1:${port}/api/calendar/google/callback`;
-    const rawRedirect = env.GOOGLE_REDIRECT_URI.trim();
-    const redirectUri =
-      rawRedirect === 'http://localhost' || rawRedirect === 'http://127.0.0.1' ? defaultCallback : rawRedirect;
 
     return {
       client_id: env.GOOGLE_CLIENT_ID,
@@ -420,7 +416,7 @@ export class CalendarService {
     return {
       status: 'authorization_required',
       responseText:
-        'Google Calendri kohalik autoriseerimine on veel tegemata. Ava /api/calendar/google/auth-url ja lõpeta autoriseerimine esmalt.',
+        'Google Calendri autoriseerimine on veel tegemata. Ava /api/calendar/google/start ja lõpeta autoriseerimine.',
       authUrl: client.generateAuthUrl({
         access_type: 'offline',
         prompt: 'consent',
@@ -434,7 +430,7 @@ export class CalendarService {
     return {
       status: 'authorization_required',
       responseText:
-        'Google Calendri OAuth seaded puuduvad. Määra .env failis GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET ja GOOGLE_REDIRECT_URI.',
+        'Google Calendri OAuth seaded puuduvad. Määra .env failis GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET ja GOOGLE_CALENDAR_REDIRECT_URI (või legacy GOOGLE_REDIRECT_URI).',
       authUrl: '',
       tokenPath: this.tokenPath,
     };

@@ -33,6 +33,41 @@ export const registerGmailModule = (app: Express) => {
     }
   });
 
+  router.get('/google/start', async (_request: Request, response: Response, next: NextFunction) => {
+    try {
+      const result = await gmailService.getAuthorizationUrl();
+      const authUrl =
+        typeof (result as { authUrl?: unknown })?.authUrl === 'string'
+          ? String((result as { authUrl?: unknown }).authUrl)
+          : '';
+      if (!authUrl) {
+        response.status(500).json(result);
+        return;
+      }
+      response.redirect(authUrl);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/google/callback', async (request: Request, response: Response, next: NextFunction) => {
+    try {
+      const code = typeof request.query.code === 'string' ? request.query.code.trim() : '';
+      if (!code) {
+        response.status(400).type('text').send('Missing Google OAuth code (?code=...)');
+        return;
+      }
+
+      await gmailService.completeAuthorization(code);
+      response
+        .status(200)
+        .type('text')
+        .send('OK. Gmail autoriseeritud. Võid selle akna sulgeda ja minna Jarvise juurde tagasi.');
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.post('/google/authorize', authRateLimit, async (request: Request, response: Response, next: NextFunction) => {
     try {
       const code = typeof request.body?.code === 'string' ? request.body.code.trim() : '';

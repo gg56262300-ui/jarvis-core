@@ -56,6 +56,7 @@ echo "Google (Gmail / Contacts / Calendar):"
 google_status_line() {
   local label="$1"
   local url="$2"
+  local start_url="${3:-}"
   local body
   body="$(curl -s -S --max-time 10 "$url" 2>/dev/null || true)"
   local st
@@ -66,6 +67,7 @@ google_status_line() {
       ;;
     authorization_required)
       echo "- $label: OAuth puudu (authorization_required)"
+      [ -n "$start_url" ] && echo "  start: $start_url"
       ;;
     "")
       echo "- $label: PROBLEM (ei saanud vastust)"
@@ -76,9 +78,9 @@ google_status_line() {
   esac
 }
 
-google_status_line "Gmail" "$BASE_URL/api/gmail/inbox?limit=1"
-google_status_line "Contacts" "$BASE_URL/api/contacts/list"
-google_status_line "Calendar" "$BASE_URL/api/calendar/today"
+google_status_line "Gmail" "$BASE_URL/api/gmail/inbox?limit=1" "$BASE_URL/api/gmail/google/start"
+google_status_line "Contacts" "$BASE_URL/api/contacts/list" "$BASE_URL/api/contacts/google/start"
+google_status_line "Calendar" "$BASE_URL/api/calendar/today" "$BASE_URL/api/calendar/google/start"
 
 echo
 echo "Integratsioonid:"

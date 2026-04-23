@@ -17,6 +17,11 @@ echo "===== GMAIL AUTH URL ====="
 curl --max-time 5 -s "$BASE_URL/api/gmail/google/auth-url" | tee "$TMP_DIR/gmail-auth.json" | python3 -m json.tool || true
 
 echo
+echo "===== GMAIL START (302) ====="
+curl --max-time 5 -s -o /dev/null -D "$TMP_DIR/gmail-start.headers" "$BASE_URL/api/gmail/google/start" || true
+head -n 5 "$TMP_DIR/gmail-start.headers" || true
+
+echo
 echo "===== GMAIL INBOX ====="
 curl --max-time 10 -s "$BASE_URL/api/gmail/inbox?limit=3" | tee "$TMP_DIR/gmail-inbox.json" | python3 -m json.tool || true
 
@@ -29,12 +34,22 @@ echo "===== CALENDAR AUTH URL ====="
 curl --max-time 5 -s "$BASE_URL/api/calendar/google/auth-url" | tee "$TMP_DIR/calendar-auth.json" | python3 -m json.tool || true
 
 echo
+echo "===== CALENDAR START (302) ====="
+curl --max-time 5 -s -o /dev/null -D "$TMP_DIR/calendar-start.headers" "$BASE_URL/api/calendar/google/start" || true
+head -n 5 "$TMP_DIR/calendar-start.headers" || true
+
+echo
 echo "===== CALENDAR UPCOMING ====="
 curl --max-time 10 -s "$BASE_URL/api/calendar/upcoming" | tee "$TMP_DIR/calendar-upcoming.json" | python3 -m json.tool || true
 
 echo
 echo "===== CONTACTS AUTH URL ====="
 curl --max-time 5 -s "$BASE_URL/api/contacts/google/auth-url" | tee "$TMP_DIR/contacts-auth.json" | python3 -m json.tool || true
+
+echo
+echo "===== CONTACTS START (302) ====="
+curl --max-time 5 -s -o /dev/null -D "$TMP_DIR/contacts-start.headers" "$BASE_URL/api/contacts/google/start" || true
+head -n 5 "$TMP_DIR/contacts-start.headers" || true
 
 echo
 echo "===== CONTACTS LIST ====="
