@@ -59,7 +59,7 @@ make_pct="40"
 make_note="NEEDS_FIX"
 if [ "$make_ok" = "1" ]; then
   make_pct="100"
-  make_note="OK"
+  make_note="OK (delivery)"
 else
   make_failed="$(curl -s -S --max-time 10 "$BASE_URL/api/integrations/make/failed?limit=50" 2>/dev/null || true)"
   make_kind_line="$(printf "%s" "$make_failed" | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{try{const j=JSON.parse(d);const s=j?.summary&&typeof j.summary==="object"?j.summary:{};const pairs=Object.entries(s);if(!pairs.length){process.stdout.write("");return;}pairs.sort((a,b)=>Number(b[1])-Number(a[1]));const [k,v]=pairs[0];process.stdout.write(String(k)+":"+String(v));}catch{process.stdout.write("")}})')"
