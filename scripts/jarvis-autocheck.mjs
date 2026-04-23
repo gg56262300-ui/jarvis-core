@@ -239,8 +239,18 @@ async function runAllChecks() {
   const channelPublic = await channelPollCheck(CHANNEL_PUBLIC_URL, 'channelPublic');
   const openai = await openaiAuthCheck();
   const crm = await crmLeadsCheck();
-  const whatsapp = await whatsappHealthCheck();
-  const overallOk = Boolean(health.ok && channelLocal.ok && channelPublic.ok && openai.ok && crm.ok && whatsapp.ok);
+
+  const waVerify = (process.env.WHATSAPP_CLOUD_VERIFY_TOKEN || '').trim();
+  const waAccess = (process.env.WHATSAPP_CLOUD_ACCESS_TOKEN || '').trim();
+  const waPhone = (process.env.WHATSAPP_CLOUD_PHONE_NUMBER_ID || '').trim();
+  const whatsappConfigured = Boolean(waVerify && waAccess && waPhone);
+  const whatsapp = whatsappConfigured
+    ? await whatsappHealthCheck()
+    : { ok: true, status: 200, durationMs: 0, label: 'whatsapp', skipped: 'NOT_CONFIGURED' };
+
+  const overallOk = whatsappConfigured
+    ? Boolean(health.ok && channelLocal.ok && channelPublic.ok && openai.ok && crm.ok && whatsapp.ok)
+    : Boolean(health.ok && channelLocal.ok && channelPublic.ok && openai.ok && crm.ok);
   return { health, channelLocal, channelPublic, openai, crm, whatsapp, overallOk };
 }
 
@@ -251,7 +261,7 @@ function summarizeFailure(checks) {
   if (!checks.channelPublic.ok) parts.push('kanal(avalik/tunnel)');
   if (checks.openai && !checks.openai.ok) parts.push('openai(autentimine)');
   if (checks.crm && !checks.crm.ok) parts.push('crm');
-  if (checks.whatsapp && !checks.whatsapp.ok) parts.push('whatsapp');
+  if (checks.whatsapp && !checks.whatsapp.ok && !checks.whatsapp.skipped) parts.push('whatsapp');
   return parts.length ? parts.join(', ') : '';
 }
 
