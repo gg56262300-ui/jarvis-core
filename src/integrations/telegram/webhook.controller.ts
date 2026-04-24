@@ -242,9 +242,10 @@ async function deliverTelegramChatTurn(
   const messageForLlm = env.TELEGRAM_BILINGUAL_REPLY
     ? [
         'Task: reply to the user message.',
+        'Also provide an Estonian translation for the owner.',
         'Output format (exact):',
-        'L1: Reply in the same language as the user used.',
-        'L2: ET: <Estonian translation of your reply>',
+        'L1: ET: <Estonian translation of your reply>',
+        'L2: ORIG: <your reply in the same language as the user used>',
         'Rules: keep it short; preserve tone; no extra headings.',
         '',
         raw,

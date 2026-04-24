@@ -128,16 +128,19 @@ export async function processMetaWebhookPayload(
       channel: 'whatsapp',
     });
 
-    // Vastus kasutajale: vaikimisi sama loogika nagu enne (pärast tööaega jms).
-    // Kui WHATSAPP_BILINGUAL_REPLY=true, siis küsime LLM-ilt lühikese vastuse kahes keeles (kasutaja keel + ET tõlge).
+    // Vaikimisi: vana loogika (pärast tööaega jms).
+    // Kui WHATSAPP_BILINGUAL_REPLY=true: saada “tõlge esmalt” stiilis abisõnum:
+    //   ET: <tõlge>
+    //   ORIG (xx): <originaal>
     let replyText = result.status === 'ready' ? (result.replyText?.trim() ?? '') : '';
     if (env.WHATSAPP_BILINGUAL_REPLY) {
       const msgForLlm = [
-        'Task: reply to the user message.',
+        'Task: Translate the inbound WhatsApp message into Estonian for the business owner.',
+        'Also detect the source language.',
         'Output format (exact):',
-        'L1: Reply in the same language as the user used.',
-        'L2: ET: <Estonian translation of your reply>',
-        'Rules: keep it short; preserve tone; no extra headings.',
+        'L1: ET: <Estonian translation>',
+        'L2: ORIG (<lang>): <original message>',
+        'Rules: preserve meaning; keep it concise; no extra lines.',
         '',
         item.body,
       ].join('\n');
