@@ -115,12 +115,30 @@ export async function processMetaWebhookPayload(
   try {
     parsed = JSON.parse(rawBody.toString('utf8')) as MetaWhatsappWebhookBody;
   } catch {
+    logger.warn({ bytes: rawBody.length }, 'whatsapp-cloud: webhook payload is not valid JSON (ignored)');
     return;
   }
 
   const items = extractTextInboundMessages(parsed);
+  logger.info(
+    {
+      object: parsed.object,
+      entryCount: parsed.entry?.length ?? 0,
+      extractedTextMessages: items.length,
+      bilingual: Boolean(env.WHATSAPP_BILINGUAL_REPLY),
+    },
+    'whatsapp-cloud: webhook received',
+  );
+  if (items.length === 0) {
+    // Meta saadab ka muud tüüpi evente (statuses, delivery jne) — meil on vaja ainult inbound text.
+    return;
+  }
   for (const item of items) {
     const phone = metaFromToPhoneDigits(item.from);
+    logger.info(
+      { from: item.from, phone, messageId: item.messageId, chars: item.body.length },
+      'whatsapp-cloud: inbound text message',
+    );
     const result = await whatsappService.handleInboundMessage({
       phone,
       name: null,
@@ -165,12 +183,16 @@ export async function processMetaWebhookPayload(
     }
 
     if (!replyText) {
+      logger.info({ from: item.from, messageId: item.messageId }, 'whatsapp-cloud: no reply text (skipped)');
       continue;
     }
 
+    logger.info({ to: item.from, messageId: item.messageId, chars: replyText.length }, 'whatsapp-cloud: sending reply');
     const sendResult = await sendWhatsappCloudText(item.from, replyText);
     if (!sendResult.ok) {
       logger.warn({ err: sendResult.error }, 'whatsapp-cloud: send reply failed');
+    } else {
+      logger.info({ to: item.from, messageId: item.messageId }, 'whatsapp-cloud: reply sent');
     }
   }
 }
