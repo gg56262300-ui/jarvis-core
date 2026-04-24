@@ -6,11 +6,8 @@ import { getRedisConnection } from './queue.provider.js';
 const connection = getRedisConnection();
 const crmService = new CrmService();
 
-if (!connection) {
-  throw new Error('REDIS_URL puudub. Worker ei saa käivituda.');
-}
-
-export const testWorker = new Worker(
+export const testWorker = connection
+  ? new Worker(
   'jarvis-default',
   async (job) => {
     if (job.name === 'test-job') {
@@ -58,4 +55,9 @@ export const testWorker = new Worker(
     connection,
     prefix: 'jarvis',
   },
-);
+)
+  : null;
+
+if (!connection) {
+  logger.warn({ redisConfigured: false }, 'Jobs worker disabled (REDIS_URL missing)');
+}

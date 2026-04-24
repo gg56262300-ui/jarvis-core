@@ -1,11 +1,16 @@
 import { Router, type Express } from 'express';
 
+import { env } from '../config/index.js';
 import { JobsService } from './jobs.service.js';
-import './test.worker.js';
 
 const jobsService = new JobsService();
 
 export const registerJobsModule = (app: Express) => {
+  if (env.REDIS_URL?.trim()) {
+    // Käivita worker ainult siis, kui Redis on seadistatud.
+    void import('./test.worker.js');
+  }
+
   const router = Router();
 
   router.get('/status', (_request, response) => {
