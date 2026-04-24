@@ -107,6 +107,33 @@ async function sendWhatsappCloudText(toDigits: string, body: string): Promise<{ 
   return { ok: true };
 }
 
+function normalizeOwnerTranslationReply(llmText: string): { reply: string; langHint?: string } {
+  const raw = llmText.trim();
+  if (!raw) return { reply: '' };
+
+  // Some models still add numbering (L1/L2). Strip it defensively.
+  const lines = raw
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => l.replace(/^L\d+\s*:\s*/i, '').trim());
+
+  const etLine = lines.find((l) => /^ET\s*:/i.test(l));
+  const origLine = lines.find((l) => /^ORIG\b/i.test(l));
+  const langMatch = origLine?.match(/\(([^)]+)\)/);
+  const lang = langMatch?.[1]?.trim().toLowerCase();
+
+  if (!etLine) {
+    // Fallback: if ET: missing, treat whole text as ET.
+    return { reply: raw };
+  }
+
+  const translation = etLine.replace(/^ET\s*:\s*/i, '').trim();
+  const code = lang ? lang.slice(0, 3).toUpperCase() : undefined;
+  const reply = code ? `${translation}\nKEEL: ${code}` : translation;
+  return { reply, langHint: lang };
+}
+
 export async function processMetaWebhookPayload(
   rawBody: Buffer,
   whatsappService: WhatsappService,
@@ -149,7 +176,7 @@ export async function processMetaWebhookPayload(
     // Vaikimisi: vana loogika (pärast tööaega jms).
     // Kui WHATSAPP_BILINGUAL_REPLY=true: saada “tõlge esmalt” stiilis abisõnum:
     //   ET: <tõlge>
-    //   ORIG (xx): <originaal>
+    //   KEEL: <xx>
     let replyText = result.status === 'ready' ? (result.replyText?.trim() ?? '') : '';
     if (env.WHATSAPP_BILINGUAL_REPLY) {
       const msgForLlm = [
@@ -177,7 +204,7 @@ export async function processMetaWebhookPayload(
       if (out.status === 200 && out.payload && typeof out.payload === 'object' && 'reply' in out.payload) {
         const llmReply = String((out.payload as { reply: string }).reply ?? '').trim();
         if (llmReply) {
-          replyText = llmReply;
+          replyText = normalizeOwnerTranslationReply(llmReply).reply;
         }
       }
     }
