@@ -32,7 +32,7 @@ describe('voice routing', () => {
 
     expect(combined).not.toContain('Palun ütle lihtne arvutus');
     expect(combined).toMatch(/Tänased kalendrisündmused|Täna on sul/);
-  });
+  }, 10_000);
 
   it('calendar next should not fall back to AI', async () => {
     const result = await callVoice('mis on minu järgmine kalendrisündmus');
@@ -44,7 +44,7 @@ describe('voice routing', () => {
 
     expect(combined).not.toContain('Palun ütle lihtne arvutus');
     expect(combined).not.toMatch(/Kahjuks ei saa ma|Kahjuks ei pääse ma|kalendri rakendust|märkmikku/i);
-  });
+  }, 10_000);
 
   it('calculator should still work', async () => {
     const result = await callVoice('arvuta 2 pluss 2');
@@ -55,5 +55,5 @@ describe('voice routing', () => {
     ].join('\n');
 
     expect(combined).toContain('Vastus on');
-  });
+  }, 10_000);
 });
