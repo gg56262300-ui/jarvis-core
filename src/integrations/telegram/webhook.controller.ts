@@ -239,8 +239,20 @@ async function deliverTelegramChatTurn(
 
   await sendTelegramChatTyping();
 
+  const messageForLlm = env.TELEGRAM_BILINGUAL_REPLY
+    ? [
+        'Task: reply to the user message.',
+        'Output format (exact):',
+        'L1: Reply in the same language as the user used.',
+        'L2: ET: <Estonian translation of your reply>',
+        'Rules: keep it short; preserve tone; no extra headings.',
+        '',
+        raw,
+      ].join('\n')
+    : raw;
+
   const chatBody = {
-    message: raw,
+    message: messageForLlm,
     history: [],
     clientTimeZone: zone,
     clientLocale: locale,

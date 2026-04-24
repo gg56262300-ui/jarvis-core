@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 
 import { env } from '../config/env.js';
+import { processChatRequestBody } from '../chat/chat.controller.js';
 import { logger } from '../shared/logger/logger.js';
 import type { MetaWhatsappWebhookBody } from './meta-cloud.types.js';
 import { WhatsappService } from './whatsapp.service.js';
@@ -127,11 +128,44 @@ export async function processMetaWebhookPayload(
       channel: 'whatsapp',
     });
 
-    if (result.status !== 'ready' || !result.replyText?.trim()) {
+    // Vastus kasutajale: vaikimisi sama loogika nagu enne (pärast tööaega jms).
+    // Kui WHATSAPP_BILINGUAL_REPLY=true, siis küsime LLM-ilt lühikese vastuse kahes keeles (kasutaja keel + ET tõlge).
+    let replyText = result.status === 'ready' ? (result.replyText?.trim() ?? '') : '';
+    if (env.WHATSAPP_BILINGUAL_REPLY) {
+      const msgForLlm = [
+        'Task: reply to the user message.',
+        'Output format (exact):',
+        'L1: Reply in the same language as the user used.',
+        'L2: ET: <Estonian translation of your reply>',
+        'Rules: keep it short; preserve tone; no extra headings.',
+        '',
+        item.body,
+      ].join('\n');
+
+      const out = await processChatRequestBody(
+        {
+          message: msgForLlm,
+          history: [],
+          clientTimeZone: 'Europe/Tallinn',
+          clientLocale: 'es',
+          clientLocalCalendarDate: undefined,
+        },
+        { agentInboxSource: 'whatsapp' },
+      );
+
+      if (out.status === 200 && out.payload && typeof out.payload === 'object' && 'reply' in out.payload) {
+        const llmReply = String((out.payload as { reply: string }).reply ?? '').trim();
+        if (llmReply) {
+          replyText = llmReply;
+        }
+      }
+    }
+
+    if (!replyText) {
       continue;
     }
 
-    const sendResult = await sendWhatsappCloudText(item.from, result.replyText.trim());
+    const sendResult = await sendWhatsappCloudText(item.from, replyText);
     if (!sendResult.ok) {
       logger.warn({ err: sendResult.error }, 'whatsapp-cloud: send reply failed');
     }
