@@ -1,4 +1,4 @@
-import express, { Router, type Express, type Request, type Response } from 'express';
+import { Router, type Express, type Request, type Response } from 'express';
 
 import { env } from '../config/env.js';
 import { logger } from '../shared/logger/logger.js';
@@ -48,17 +48,22 @@ export const registerWhatsappModule = (app: Express) => {
 
   router.post(
     '/webhook',
-    express.raw({ type: 'application/json' }),
     async (req: Request, res: Response) => {
       if (!env.WHATSAPP_CLOUD_VERIFY_TOKEN?.trim()) {
         res.status(503).json({ error: 'webhook_not_configured' });
         return;
       }
 
-      const rawBody = req.body as Buffer;
-      if (!Buffer.isBuffer(rawBody)) {
-        res.sendStatus(400);
-        return;
+      const captured = (req as unknown as { rawBody?: Buffer }).rawBody;
+      let rawBody: Buffer;
+      if (captured) {
+        rawBody = captured;
+      } else if (Buffer.isBuffer(req.body)) {
+        rawBody = req.body;
+      } else if (typeof req.body === 'string') {
+        rawBody = Buffer.from(req.body, 'utf8');
+      } else {
+        rawBody = Buffer.from(JSON.stringify(req.body ?? {}), 'utf8');
       }
 
       const secret = env.WHATSAPP_CLOUD_APP_SECRET?.trim();

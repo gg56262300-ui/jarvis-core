@@ -50,7 +50,18 @@ export const buildApp = () => {
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
   // Vaikimisi express.json() limiit on ~100kb; voice audio base64 ületab selle enne /api/voice/audio-turn rada.
-  app.use(express.json({ limit: '20mb' }));
+  app.use(
+    express.json({
+      limit: '20mb',
+      verify: (req, _res, buf) => {
+        // WhatsApp webhook signature verification needs the exact raw bytes.
+        const url = (req as unknown as { url?: string }).url;
+        if (typeof url === 'string' && url.startsWith('/api/whatsapp/webhook')) {
+          (req as unknown as { rawBody?: Buffer }).rawBody = buf;
+        }
+      },
+    }),
+  );
   app.use(httpLogger);
   app.use(
     express.static(publicDirectory, {
