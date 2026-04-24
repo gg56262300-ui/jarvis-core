@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { logger } from '../../shared/logger/logger.js';
@@ -53,4 +53,56 @@ export function readRecentFailedMakeRecords(limit = 100): FailedMakeRecord[] {
     }
   }
   return out;
+}
+
+export type ClearFailedMakeRecordsResult = {
+  ok: true;
+  removed: number;
+  kept: number;
+};
+
+export function clearFailedMakeRecords(filter?: {
+  /** Kui antud, eemaldab ainult selle kindi read; muidu eemaldab kõik. */
+  kind?: FailedMakeRecord['failureKind'];
+  /** Kui antud, eemaldab ainult need read, mille retryable vastab; muidu ignoreerib. */
+  retryable?: boolean;
+}): ClearFailedMakeRecordsResult {
+  if (!existsSync(FAIL_LOG)) {
+    return { ok: true, removed: 0, kept: 0 };
+  }
+
+  const raw = readFileSync(FAIL_LOG, 'utf8');
+  if (!raw.trim()) {
+    return { ok: true, removed: 0, kept: 0 };
+  }
+
+  const lines = raw.split('\n').filter((l) => l.trim().length > 0);
+  let removed = 0;
+  const keptLines: string[] = [];
+
+  for (const line of lines) {
+    try {
+      const parsed = JSON.parse(line) as FailedMakeRecord;
+      const kindOk = filter?.kind ? (parsed.failureKind || 'unknown') === filter.kind : true;
+      const retryOk =
+        typeof filter?.retryable === 'boolean' ? Boolean(parsed.retryable) === filter.retryable : true;
+      const remove = kindOk && retryOk;
+      if (remove) {
+        removed += 1;
+      } else {
+        keptLines.push(line);
+      }
+    } catch {
+      // Kui rida on katkine, jätame alles (turvaline).
+      keptLines.push(line);
+    }
+  }
+
+  try {
+    writeFileSync(FAIL_LOG, keptLines.length ? `${keptLines.join('\n')}\n` : '', 'utf8');
+  } catch (error) {
+    logger.warn({ err: error, operation: 'make.webhook.failed.clear' }, 'Could not clear failed Make log');
+  }
+
+  return { ok: true, removed, kept: keptLines.length };
 }

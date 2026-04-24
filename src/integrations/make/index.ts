@@ -2,7 +2,7 @@ import { Router, type Express, type Response } from 'express';
 import { z } from 'zod';
 
 import { env } from '../../config/index.js';
-import { readRecentFailedMakeRecords } from './make-webhook-failed.store.js';
+import { clearFailedMakeRecords, readRecentFailedMakeRecords } from './make-webhook-failed.store.js';
 import { classifyMakeFailure, sendJarvisMakePayload } from './make-webhook.client.js';
 
 const DEFAULT_FAILED_LOG_LIMIT = 100;
@@ -46,6 +46,18 @@ const failedQuerySchema = z.object({
       return normalized || undefined;
     }, z.enum(MAKE_FAILURE_KINDS).optional())
     .optional(),
+});
+
+const clearFailedQuerySchema = z.object({
+  confirm: z
+    .preprocess((value) => {
+      if (typeof value !== 'string') return undefined;
+      const normalized = value.trim().toLowerCase();
+      return normalized === '1' || normalized === 'true' || normalized === 'yes' ? true : undefined;
+    }, z.boolean().optional())
+    .optional(),
+  retryable: failedQuerySchema.shape.retryable,
+  kind: failedQuerySchema.shape.kind,
 });
 
 /** Jarvis accepts the request; Make delivery status is separate so 404/410 from Make do not block callers. */
@@ -179,6 +191,38 @@ export const registerMakeIntegrationModule = (app: Express) => {
       summary,
       filters: { limit, retryable: requestedRetryable ?? null, kind: requestedKind ?? null },
       items: kindFilteredItems,
+    });
+  });
+
+  router.post('/failed/clear', (req, res) => {
+    if (env.NODE_ENV === 'production' && !env.MAKE_WEBHOOK_FAILED_INSPECT_ENABLED) {
+      res.status(404).json({ ok: false, error: 'NOT_FOUND' });
+      return;
+    }
+
+    const parsedQuery = clearFailedQuerySchema.safeParse(req.query ?? {});
+    if (!parsedQuery.success || parsedQuery.data.confirm !== true) {
+      res.status(400).json({
+        ok: false,
+        error: 'CONFIRM_REQUIRED',
+        detail: 'Use POST /api/integrations/make/failed/clear?confirm=1&kind=...&retryable=true|false',
+      });
+      return;
+    }
+
+    const result = clearFailedMakeRecords({
+      kind: parsedQuery.data.kind,
+      retryable: parsedQuery.data.retryable,
+    });
+
+    res.json({
+      ok: true,
+      removed: result.removed,
+      kept: result.kept,
+      filters: {
+        kind: parsedQuery.data.kind ?? null,
+        retryable: typeof parsedQuery.data.retryable === 'boolean' ? parsedQuery.data.retryable : null,
+      },
     });
   });
 
