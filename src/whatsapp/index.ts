@@ -70,6 +70,13 @@ export const registerWhatsappModule = (app: Express) => {
       if (secret) {
         const sig = req.get('x-hub-signature-256');
         if (!verifyMetaWebhookSignature(rawBody, sig, secret)) {
+          logger.warn(
+            {
+              hasSignatureHeader: Boolean(sig?.trim()),
+              rawBodyBytes: rawBody.length,
+            },
+            'whatsapp-cloud: invalid webhook signature (403) — kontrolli, et WHATSAPP_CLOUD_APP_SECRET ühtib Meta App Secretiga selle sama äpi all',
+          );
           res.sendStatus(403);
           return;
         }
