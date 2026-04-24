@@ -19,6 +19,7 @@ data/calendar-last-action.json
 data/google-contacts-token.json
 data/make-oauth-tokens.json
 data/push-subscriptions.json
+data/user-settings.json
 data/push-vapid.json
 data/*.sqlite-shm
 data/*.sqlite-wal

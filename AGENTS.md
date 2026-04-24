@@ -233,6 +233,9 @@ Terminali marker: iga käsuploki alguses prindi roheline marker printf '\033[1;4
 - Ära anna käsuplokkides kommentaare (`#`) ega küsimärke; ainult puhtad käsud.
 - Iga terminali käsuploki alguses prindi roheline marker:
   `printf '\033[1;42m========== KOPERI SIIT ==========\033[0m\n'`
+- **AAA: enne RUN-pack käsuplokki 1 rida “siht” (kohustuslik):** enne iga käsuplokki kirjuta **üks** lühike rida kujul
+  `SIHT: <MAC|SERVER> <kaust> | <ENV|URL|PM2|GIT|CHECK>`
+  et oleks 100% selge, kuhu see käib (nt `SIHT: SERVER /root/jarvis-core | ENV (.env)` või `SIHT: SERVER /root/jarvis-core | CHECK (curl)`).
 - **AAA: terminali “loogika + prompt” (kohustuslik):** enne iga käsku ütle alati **kus** see käib (Mac vs server) ja milline prompt peab nähtav olema (`kait@...` vs `root@...`). Kui terminal ootab interaktiivset sisendit (`password:` / `Are you sure...` / `Save modified buffer?`), **ära anna uut käsku**; ütle täpselt, mida sisestada (nt `yes`, `N`, `Ctrl+C`) ja lõpeta see samm enne järgmise käsu andmist. Kui on mitu SSH taset, siis juhis “välju” on `exit` **kuni prompt on Maci oma**.
 - **AAA: token/parool vahetus (kohustuslik):** saladusi ei näidata ega kleebita chatti. Vaikimisi kasuta alati “peidetud paste + Enter” plokki (`read -r -s ...`), mitte `nano` ega `.env` sisu kopeerimist. Restart (`pm2 restart ... --update-env`) alles siis, kui sisend oli **mitte-tühi** ja kirjutus käsk kinnitas **OK**.
 - Kui on 2+ võimalikku teed, vali ise kõige turvalisem ja lühem (stabiilsus > kiirus).
@@ -257,6 +260,13 @@ Terminali marker: iga käsuploki alguses prindi roheline marker printf '\033[1;4
   3) **Lõpp-tulemus**: mis täpselt peab juhtuma (HTTP 200/302, “OK” tekst, “status: ready”) ja kuidas see kontrollitakse (üks URL / üks käsk).
 - **N-punktilise järjekorra aruanne (omaniku kinnitatud tööviis):** kui on kokku lepitud kindel **nummerdatud** tööde nimekiri (nt 10 punkti järjest), agent **ei edasta** iga punkti või osalise täitumise kohta eraldi vahe-aruandeid; agent töötab nimekirja järgi ja annab **ühe koondaruande**, kui **kõik** punktid on **valmis** või kui tekib **blokeerija**, mis nõuab omaniku otsust (siis **üks** lühike teade põhjusega). Erandid: omanik küsib eraldi staatust; `AAA`/`AAAA` reegli täpsustus. Sama loogika kehtib tulevikus analoogiliste nimekirjade kohta, kui omanik seda kinnitab (`AAA`).
 - **AAA: “ära sega, tee mahtu” (omaniku kinnitatud):** kui omanik ütleb, et agent peab töötama individuaalselt / “ära dörgi” / “tee 200–300 ülesannet”, siis agent **ei küsi** jooksvalt kinnitusi ega “kas jätkan?” küsimusi. Agent teeb järjest tööpakke, mida saab teha autonoomselt (stabiilsus+automaatika+testid+docs) ja annab tagasisidet **ainult** siis, kui (a) **50 suuremat tööpakki** on tervikuna valmis või (b) tekib **blokeerija**, mis vajab omaniku otsust (saladus/valik/oht). Omanik küsib staatust siis, kui tal endal huvi on.
+- **QQQ: paralleel A+B (omaniku kinnitatud):** kui omanik kirjutab sõnumis `QQQ` (ees / sees / lõpus), siis agent käivitab **paralleelselt**:
+  - **A‑suund (ilma omaniku osaluseta):** autonoomne “maht” (repo + testid + deploy juhised), ilma jooksva kinnituste küsimiseta.
+  - **B‑suund (omaniku osalusega WEB/UI):** ainult tegevused väljaspool Cursorit (brauser, BotFather, Meta UI jne) **1 samm korraga**: **1 otselink + 1 tegevus + 1 oodatav tulemus**.
+  - **Staatuse raporteerimine (kompaktne):** agent näitab chatis ainult 1‑rea staatust (mitte rohkem kui 1 rida korraga), formaadis:
+    `A: <nimi> <foor> <pct>% | B: <nimi> <foor> <pct>%`
+    kus foor = 🟢/🟡/🔴 ja pct = 0..100. Detailid, logid ja RUN-pack käsud tulevad ainult siis, kui (a) tekib blokeerija või (b) omanik küsib.
+  - **Kinnituste koondamine:** kõik B‑suuna kinnitused koondatakse 10–20 kaupa RUN-pack’iks (kui pole kohest ohtu), vastavalt `AAA: kinnituste “RUN-pack”` reeglile.
 - **AAA: kinnituste “RUN-pack” (omaniku kinnitatud):** kui töö käigus tekib asju, mis vajavad omaniku otsust/kinnitust (saladus/valik/oht), siis agent **ei küsi** neid ükshaaval. Agent kogub need **üheks paketiks** ja küsib kinnitust **harva**:
   - vaikimisi koondab **10–20** kinnitust ühte “RUN-pack” sõnumisse (mitte “üks korraga” jada), välja arvatud kui kogunemise lõpuni ootamine suurendaks kohest ohtu;
   - agent ei katkesta autonoomset tööd enne, kui koondpakett on valmis (v.a. kui oht on kohene);

@@ -14,7 +14,7 @@ import {
   patchCalendarEventById,
   type CalendarEventItem,
 } from '../modules/calendar/services/googleCalendar.service.js';
-import { appendAgentInboxEntry } from '../agent-inbox/agent-inbox.service.js';
+import { appendAgentInboxEntry, type AgentInboxSource } from '../agent-inbox/agent-inbox.service.js';
 import { CalculatorService } from '../calculator/calculator.service.js';
 import { appendChatChannelMessage } from './channel.controller.js';
 import { sendTelegramMessage } from '../integrations/telegram/telegram.client.js';
@@ -33,7 +33,7 @@ const MOBILE_WORKFLOW_STAGES = [
 ] as const;
 
 type MobileRemoteMode = 'continue' | 'stop';
-type MobileRemoteCommand = 'status' | 'continue' | 'stop' | 'next' | 'help' | 'wake' | 'sleep' | 'rules';
+type MobileRemoteCommand = 'status' | 'continue' | 'stop' | 'next' | 'help' | 'rules';
 type MobileRemoteStageKey = (typeof MOBILE_WORKFLOW_STAGES)[number]['key'];
 type MobileRemoteState = {
   mode: MobileRemoteMode;
@@ -58,10 +58,12 @@ async function readMobileRemoteState(): Promise<MobileRemoteState> {
         : 0;
     const stageKey = MOBILE_WORKFLOW_STAGES[stageIndex].key;
     const version = Number.isInteger(Number(parsed.version)) ? Number(parsed.version) : 1;
+    const rawLast = String(parsed.lastCommand ?? 'init');
+    const normalizedLast = rawLast === 'wake' || rawLast === 'sleep' ? 'init' : rawLast;
     const lastCommand =
-      typeof parsed.lastCommand === 'string' &&
-      ['status', 'continue', 'stop', 'next', 'help', 'wake', 'sleep', 'rules', 'init'].includes(parsed.lastCommand)
-        ? (parsed.lastCommand as MobileRemoteState['lastCommand'])
+      typeof normalizedLast === 'string' &&
+      ['status', 'continue', 'stop', 'next', 'help', 'rules', 'init'].includes(normalizedLast)
+        ? (normalizedLast as MobileRemoteState['lastCommand'])
         : 'init';
     const lastApplied = typeof parsed.lastApplied === 'boolean' ? parsed.lastApplied : true;
     const updatedAt = typeof parsed.updatedAt === 'string' ? parsed.updatedAt : new Date().toISOString();
@@ -173,35 +175,40 @@ function normalizeMobileCommand(raw: string): MobileRemoteCommand | null {
   ) {
     return 'status';
   }
-  if (['jätka', 'jätkame', 'continue', 'go', 'да', 'jah', 'продолжай', 'дальше'].includes(stripped)) {
+  if (
+    [
+      'jätka',
+      'jätkame',
+      'continue',
+      'go',
+      'да',
+      'jah',
+      'продолжай',
+      'дальше',
+      'individually',
+      'индивидуально работай',
+      'работай в индивидуальном режиме',
+      'индивидуальный режим',
+      'в индивидуальном режиме',
+    ].includes(stripped)
+  ) {
     return 'continue';
   }
   if (['individuaalselt', 'individual', 'индивидуально', 'работай индивидуально'].includes(stripped)) {
     return 'continue';
   }
-  if (['stop', 'stopp', 'seis', 'pause', 'пауза', 'стоп', 'ei', 'нет'].includes(stripped)) return 'stop';
   if (
-    ['maga', 'sleep', 'засыпай', 'robert засыпай', 'спи', 'спать', 'уснуть', 'уйди в сон', 'sleep mode', 'uinu'].includes(stripped)
+    stripped.length >= 2 &&
+    stripped.length <= 220 &&
+    /\bиндивидуал/i.test(stripped) &&
+    !/не\s+индивидуал/i.test(stripped)
   ) {
-    return 'sleep';
+    return 'continue';
   }
+  if (['stop', 'stopp', 'seis', 'pause', 'пауза', 'стоп', 'ei', 'нет'].includes(stripped)) return 'stop';
   if (['järgmine', 'next', 'следующий', 'dalše', 'дальше этап'].includes(stripped)) return 'next';
   if (['abi', 'help', 'помощь', 'команды', 'käsud'].includes(stripped)) return 'help';
   if (['aaa', 'aaaa', 'rules', 'reeglid', 'правила'].includes(stripped)) return 'rules';
-  if (
-    [
-      'ärka',
-      'ärkame',
-      'wake',
-      'wake up',
-      'просыпайся',
-      'robert prosõpaisja',
-      'robert prosypaisya',
-      'проснись',
-    ].includes(stripped)
-  ) {
-    return 'wake';
-  }
   return null;
 }
 
@@ -246,7 +253,7 @@ function applyMobileCommand(
       next: base,
       applied: false,
       reply:
-        'ABI: ÄRKA | MAGA | INDIVIDUAALSELT | STAATUS | JDEV | JARVIS PROJEKT | JÄTKA | STOP | JÄRGMINE | AAAA. Cursori agent (Mac): alusta rida sõnaga AGENT: või CURSOR: (vene АГЕНТ: / КУРСОР:). Kalender/meil eraldi — tavaline lause ilma nende eesliiteta.',
+        'ABI: INDIVIDUAALSELT | STAATUS | JDEV | JARVIS PROJEKT | JÄTKA | STOP | JÄRGMINE | AAA/AAAA. Telegram (tehniline): /jarvis | /ping | /inbox. Cursori agent (Mac): alusta rida sõnaga AGENT: või CURSOR: (vene АГЕНТ: / КУРСОР:). Kalender/meil eraldi — tavaline lause ilma nende eesliiteta.',
     };
   }
   if (command === 'rules') {
@@ -276,7 +283,7 @@ function applyMobileCommand(
   }
 
   const nextMode: MobileRemoteMode =
-    command === 'wake' || command === 'continue' ? 'continue' : command === 'sleep' || command === 'stop' ? 'stop' : base.mode;
+    command === 'continue' ? 'continue' : command === 'stop' ? 'stop' : base.mode;
   if (nextMode === base.mode) {
     return { next: base, applied: false, reply: `JUBA AKTIIVNE: ${makeStatusLine(base.mode, base.version)}` };
   }
@@ -289,8 +296,6 @@ function applyMobileCommand(
     lastApplied: true,
     updatedAt: new Date().toISOString(),
   };
-  if (command === 'wake') return { next, applied: true, reply: 'ÄRKVEL ✅ MODE:JÄTKA. Käsk: STAATUS' };
-  if (command === 'sleep') return { next, applied: true, reply: 'MAGAN 😴 MODE:STOP. Käsk äratuseks: ÄRKA / просыпайся' };
   if (command === 'continue') return { next, applied: true, reply: 'OK. MODE:JÄTKA ✅' };
   return { next, applied: true, reply: 'OK. MODE:STOP ⛔' };
 }
@@ -372,6 +377,31 @@ async function tryHandleMobileRemoteCommand(rawUserMessage: string): Promise<str
   };
   await writeMobileRemoteState(persisted);
   return out.reply;
+}
+
+/**
+ * Telegram: kui omanik on mujal jätnud MODE:STOP, taastatakse JÄTKA automaatselt iga tavalise sõnumiga,
+ * et kanal oleks vaikimisi «индивидуально» / tööhoos. STOP-käsk töödeldakse enne seda eraldi.
+ */
+async function silentTelegramAutoJatkaBeforeLlm(
+  rawUserMessage: string,
+  meta?: ChatRequestProcessMeta,
+): Promise<void> {
+  if (!meta?.telegramAutoJatka) {
+    return;
+  }
+  if (normalizeMobileCommand(rawUserMessage) === 'stop') {
+    return;
+  }
+  const prev = await readMobileRemoteState();
+  if (prev.mode !== 'stop') {
+    return;
+  }
+  const out = applyMobileCommand(prev, 'continue');
+  if (!out.applied) {
+    return;
+  }
+  await writeMobileRemoteState(out.next);
 }
 
 /** Iga /api/chat päring eraldi — muidu jääks „täna“ valeks pärast keskööd ja võrgu üleskäiku. */
@@ -1290,8 +1320,20 @@ function fallbackReplyWithoutLlm(rawUserMessage: string): string {
   return 'Sain sõnumi kätte. AI-ühendus on hetkel kõikuv; kanal töötab ja jätkan kohe, kui ühendus taastub.';
 }
 
-export async function handleChat(req: Request, res: Response) {
-  const { message, history = [], clientTimeZone, clientLocale, clientLocalCalendarDate } = req.body as {
+export type ChatRequestProcessMeta = {
+  agentInboxSource?: AgentInboxSource;
+  /** Telegram: taastab MODE:JÄTKA vaikselt enne LLM-i, kui olek oli STOP ja sõnum pole STOP-käsk. */
+  telegramAutoJatka?: boolean;
+};
+
+/**
+ * Sama loogika mis POST /api/chat keha; kasutatakse ka Telegrami webhookist (ilma HTTP topeltkutsuta).
+ */
+export async function processChatRequestBody(
+  body: unknown,
+  meta?: ChatRequestProcessMeta,
+): Promise<{ status: number; payload: unknown }> {
+  const { message, history = [], clientTimeZone, clientLocale, clientLocalCalendarDate } = body as {
     message: string;
     history: OpenAI.Chat.ChatCompletionMessageParam[];
     clientTimeZone?: string;
@@ -1301,26 +1343,24 @@ export async function handleChat(req: Request, res: Response) {
   };
 
   if (!message?.trim()) {
-    res.status(400).json({ error: 'message puudub' });
-    return;
+    return { status: 400, payload: { error: 'message puudub' } };
   }
 
   const activeZone = resolveClientTimeZone(clientTimeZone);
   const clientTodayYmd = parseClientLocalCalendarYmd(clientLocalCalendarDate);
   const rawUserMessage = message.trim();
-  void appendAgentInboxEntry({ source: 'chat', text: rawUserMessage });
+  const inboxSource: AgentInboxSource = meta?.agentInboxSource ?? 'chat';
+  void appendAgentInboxEntry({ source: inboxSource, text: rawUserMessage });
   void appendChatChannelMessage({ from: 'user', text: rawUserMessage });
 
   const directArithmeticFirst = tryDirectArithmeticReply(rawUserMessage);
   if (directArithmeticFirst) {
-    res.json({ reply: directArithmeticFirst });
-    return;
+    return { status: 200, payload: { reply: directArithmeticFirst } };
   }
 
   if (!env.OPENAI_API_KEY) {
     const m = 'OpenAI API võti puudub serveris.';
-    res.status(503).json({ error: m, message: m });
-    return;
+    return { status: 503, payload: { error: m, message: m } };
   }
 
   const openai = createJarvisOpenAI();
@@ -1337,8 +1377,7 @@ export async function handleChat(req: Request, res: Response) {
 
   const directTime = tryDirectCurrentTimeQuestionReply(rawUserMessage, activeZone);
   if (directTime) {
-    res.json({ reply: directTime });
-    return;
+    return { status: 200, payload: { reply: directTime } };
   }
 
   const directDate = tryDirectTodaysDateQuestionReply(rawUserMessage, activeZone, clientTodayYmd);
@@ -1349,15 +1388,15 @@ export async function handleChat(req: Request, res: Response) {
         'chat: kuupäeva otsevastus ilma brauseri clientLocalCalendarDate — tõenäoliselt vana chat.html või päring ilma väljata',
       );
     }
-    res.json({ reply: directDate });
-    return;
+    return { status: 200, payload: { reply: directDate } };
   }
 
   const mobileCommandReply = await tryHandleMobileRemoteCommand(rawUserMessage);
   if (mobileCommandReply) {
-    res.json({ reply: mobileCommandReply });
-    return;
+    return { status: 200, payload: { reply: mobileCommandReply } };
   }
+
+  await silentTelegramAutoJatkaBeforeLlm(rawUserMessage, meta);
 
   const dateAugmented = augmentUserMessageWithDateContext(rawUserMessage, activeZone, clientTodayYmd);
   const userContentForLlm = augmentUserMessageForAgentBridge(rawUserMessage, dateAugmented);
@@ -1370,7 +1409,7 @@ export async function handleChat(req: Request, res: Response) {
 
   try {
     let response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: env.JARVIS_CHAT_COMPLETION_MODEL,
       messages,
       tools,
       tool_choice: 'auto',
@@ -1406,7 +1445,7 @@ export async function handleChat(req: Request, res: Response) {
       }
 
       response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: env.JARVIS_CHAT_COMPLETION_MODEL,
         messages,
         tools,
         tool_choice: 'auto',
@@ -1418,10 +1457,18 @@ export async function handleChat(req: Request, res: Response) {
       }
     }
 
-    res.json({ reply: assistantMessage.content ?? '' });
+    return { status: 200, payload: { reply: assistantMessage.content ?? '' } };
   } catch (err) {
     logger.error({ err }, 'chat: OpenAI error');
     const fallback = fallbackReplyWithoutLlm(rawUserMessage);
-    res.status(200).json({ reply: fallback, degraded: true, error: chatFailureMessageForClient(err) });
+    return {
+      status: 200,
+      payload: { reply: fallback, degraded: true, error: chatFailureMessageForClient(err) },
+    };
   }
+}
+
+export async function handleChat(req: Request, res: Response) {
+  const out = await processChatRequestBody(req.body);
+  res.status(out.status).json(out.payload);
 }

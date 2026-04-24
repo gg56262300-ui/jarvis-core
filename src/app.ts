@@ -10,6 +10,7 @@ import { registerContactsModule } from './contacts/index.js';
 import { registerCrmModule } from './crm/index.js';
 import { registerGmailModule } from './gmail/index.js';
 import { registerMakeIntegrationModule } from './integrations/make/index.js';
+import { registerTelegramIntegrationModule } from './integrations/telegram/index.js';
 import { registerJobsModule } from './jobs/index.js';
 import { registerRemindersModule } from './reminders/index.js';
 import { registerTranslationModule } from './translation/index.js';
@@ -72,6 +73,7 @@ export const buildApp = () => {
   registerContactsModule(app);
   registerGmailModule(app);
   registerMakeIntegrationModule(app);
+  registerTelegramIntegrationModule(app);
   registerCalendarModule(app);
   registerCalculatorModule(app);
   registerTranslationModule(app);

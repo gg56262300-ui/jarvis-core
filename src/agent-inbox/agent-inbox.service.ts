@@ -6,7 +6,7 @@ import { logger } from '../shared/logger/logger.js';
 
 const MAX_TEXT_CHARS = 8000;
 
-export type AgentInboxSource = 'chat' | 'api';
+export type AgentInboxSource = 'chat' | 'api' | 'telegram';
 
 export type AgentInboxEntry = {
   t: string;

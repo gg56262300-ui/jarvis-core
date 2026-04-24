@@ -1,3 +1,5 @@
 
+echo "===== PRE-COMMIT: AGENTS CHARTER =====" &&
+sh ./scripts/agents-charter-check.sh &&
 echo "===== PRE-COMMIT: FAST GATE =====" &&
 npm run gate:fast
