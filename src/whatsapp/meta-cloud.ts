@@ -155,10 +155,10 @@ export async function processMetaWebhookPayload(
       const msgForLlm = [
         'Task: Translate the inbound WhatsApp message into Estonian for the business owner.',
         'Also detect the source language.',
-        'Output format (exact):',
-        'L1: ET: <Estonian translation>',
-        'L2: ORIG (<lang>): <original message>',
-        'Rules: preserve meaning; keep it concise; no extra lines.',
+        'Output format (exact, exactly 2 lines, no numbering):',
+        'ET: <Estonian translation>',
+        'ORIG (<lang>): <original message>',
+        'Rules: preserve meaning; keep it concise; no extra lines; do not add prefixes like L1/L2.',
         '',
         item.body,
       ].join('\n');
