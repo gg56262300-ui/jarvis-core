@@ -198,6 +198,11 @@ const envSchema = z.object({
   WHATSAPP_CLOUD_VERIFY_TOKEN: z.string().optional(),
   /** Meta rakenduse salajane võti — X-Hub-Signature-256 kontrolliks. */
   WHATSAPP_CLOUD_APP_SECRET: z.string().optional(),
+  /** Ajutine test-lipp: kui true/1, siis webhook signature kontroll jäetakse vahele (mitte tootmises). */
+  WHATSAPP_CLOUD_SKIP_SIGNATURE_VERIFY: z
+    .string()
+    .optional()
+    .transform((value) => value === 'true' || value === '1'),
   /** Graph API püsiva või ajutise juurdepääsu token (sõnumite saatmiseks). */
   WHATSAPP_CLOUD_ACCESS_TOKEN: z.string().optional(),
   /** WhatsApp Business telefoninumbri ID (Graph API URL-is). */

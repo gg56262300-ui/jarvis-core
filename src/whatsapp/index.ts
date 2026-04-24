@@ -26,7 +26,15 @@ export const registerWhatsappModule = (app: Express) => {
       status: missing.length === 0 ? 'ready' : 'degraded',
       ok: missing.length === 0,
       missing,
-      signatureVerification: env.NODE_ENV === 'production' ? (appSecret ? 'enabled' : 'required') : appSecret ? 'enabled' : 'dev_only_off',
+      signatureVerification: env.WHATSAPP_CLOUD_SKIP_SIGNATURE_VERIFY
+        ? 'disabled_by_env'
+        : env.NODE_ENV === 'production'
+          ? appSecret
+            ? 'enabled'
+            : 'required'
+          : appSecret
+            ? 'enabled'
+            : 'dev_only_off',
     });
   });
 
@@ -67,7 +75,9 @@ export const registerWhatsappModule = (app: Express) => {
       }
 
       const secret = env.WHATSAPP_CLOUD_APP_SECRET?.trim();
-      if (secret) {
+      if (env.WHATSAPP_CLOUD_SKIP_SIGNATURE_VERIFY) {
+        logger.warn('whatsapp-cloud: signature verification skipped by env (WHATSAPP_CLOUD_SKIP_SIGNATURE_VERIFY)');
+      } else if (secret) {
         const sig = req.get('x-hub-signature-256');
         if (!verifyMetaWebhookSignature(rawBody, sig, secret)) {
           logger.warn(
