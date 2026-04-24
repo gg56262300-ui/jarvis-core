@@ -7,12 +7,18 @@ export const errorHandler = (
   error: Error,
   request: Request,
   response: Response,
-  _next: NextFunction,
+  next: NextFunction,
 ) => {
-  void _next;
+  void next;
   const appError = error instanceof AppError ? error : new AppError('Unexpected error');
 
-  logger.error(
+  const isNotFound = appError.code === 'ROUTE_NOT_FOUND' || appError.statusCode === 404;
+  const noisyProbe =
+    isNotFound &&
+    /(^|\/)(wp-admin|wordpress|wp-login\.php|xmlrpc\.php)(\/|$)/i.test(request.path || '');
+
+  const log = noisyProbe ? logger.info : logger.error;
+  log(
     {
       err: error,
       path: request.path,
